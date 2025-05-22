@@ -23,7 +23,13 @@ int main()
 		positions are always relative OR absolute.
 	*/
 
-	vekt::widget* w = builder.allocate();
+	builder.init(100);
+	vekt::widget* root	= builder.allocate();
+	vekt::widget* child = builder.allocate();
+	root->add_child(child);
+	child->get_data_widget().flags = vekt::widget_flags::wf_pos_x_relative | vekt::widget_flags::wf_pos_y_relative | vekt::widget_flags::wf_size_x_relative | vekt::widget_flags::wf_size_y_relative;
+
+	builder.build();
 
 	return 0;
 }
