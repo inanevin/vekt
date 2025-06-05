@@ -375,6 +375,7 @@ namespace vekt
 		static inline float sin(float x) { return std::sin(x); }
 		static inline float lerp(float a, float b, float t) { return a + (b - a) * t; }
 		static inline float ceilf(float f) { return std::ceilf(f); }
+		static inline float remap(float val, float from_low, float from_high, float to_low, float to_high) { return to_low + (val - from_low) * (to_high - to_low) / (from_high - from_low); }
 	};
 
 	enum class input_event_type
@@ -508,10 +509,16 @@ namespace vekt
 		direction	 color_direction = direction::horizontal;
 	};
 
+	struct font;
+
 	struct gfx_text
 	{
-		const char* text = nullptr;
-		id			font = 0;
+		const char*	 text			 = nullptr;
+		font*		 target_font	 = nullptr;
+		unsigned int spacing		 = 0;
+		vec4		 color_start	 = {};
+		vec4		 color_end		 = {};
+		direction	 color_direction = direction::horizontal;
 	};
 
 	enum class gfx_type
@@ -697,15 +704,14 @@ namespace vekt
 			}
 		}
 
-		inline void set_draw_order(bool draw_order) { _widget_gfx.draw_order = draw_order; }
-		inline bool get_is_visible() const { return _widget_data.flags & widget_flags::wf_visible; }
-		inline bool is_point_in_bounds(unsigned int x, unsigned int y)
+		inline void			set_draw_order(bool draw_order) { _widget_gfx.draw_order = draw_order; }
+		inline bool			get_is_visible() const { return _widget_data.flags & widget_flags::wf_visible; }
+		inline widget_data& get_data_widget() { return _widget_data; }
+		inline widget_gfx&	get_data_gfx() { return _widget_gfx; }
+		inline bool			is_point_in_bounds(unsigned int x, unsigned int y)
 		{
 			return x >= _widget_data.final_pos.x && x <= _widget_data.final_pos.x + _widget_data.final_size.x && y >= _widget_data.final_pos.y && y <= _widget_data.final_pos.y + _widget_data.final_size.y;
 		}
-		inline widget_data& get_data_widget() { return _widget_data; }
-		inline widget_gfx&	get_data_gfx() { return _widget_gfx; }
-
 		template <typename T>
 		inline T* get_data_user() const
 		{
@@ -796,23 +802,69 @@ namespace vekt
 		unsigned char _user_data[VEKT_USER_DATA_SIZE];
 	};
 
-	struct vertex
+	struct vertex_p
+	{
+		vec2 pos;
+	};
+
+	struct vertex_pu
+	{
+		vec2 pos;
+		vec2 uv;
+	};
+
+	struct vertex_pc
 	{
 		vec2 pos;
 		vec4 color;
 	};
+
+	struct vertex_puc
+	{
+		vec2 pos;
+		vec2 uv;
+		vec4 color;
+	};
+
+#ifdef VEKT_VERTEX_BASIC_P
+	typedef vertex_p vertex_basic;
+#elifdef VEKT_VERTEX_BASIC_PU
+	typedef vertex_pu vertex_basic;
+#elifdef VEKT_VERTEX_BASIC_PC
+	typedef vertex_pc vertex_basic;
+#else
+	typedef vertex_puc vertex_basic;
+#endif
+
+#ifdef VEKT_VERTEX_TEXT_P
+	typedef vertex_p vertex_text;
+#elifdef VEKT_VERTEX_TEXT_PU
+	typedef vertex_pu vertex_text;
+#elifdef VEKT_VERTEX_TEXT_PC
+	typedef vertex_pc vertex_text;
+#else
+	typedef vertex_puc vertex_text;
+#endif
 
 	typedef unsigned short index;
 
 	class builder
 	{
 	public:
-		struct draw_buffer
+		struct basic_draw_buffer
 		{
-			pod_vector<vertex> vertices;
-			pod_vector<index>  indices;
-			unsigned int	   draw_order = 0;
-			void*			   user_data  = nullptr;
+			pod_vector<vertex_basic> vertices;
+			pod_vector<index>		 indices;
+			unsigned int			 draw_order = 0;
+			void*					 user_data	= nullptr;
+		};
+
+		struct text_draw_buffer
+		{
+			pod_vector<vertex_text> vertices;
+			pod_vector<index>		indices;
+			unsigned int			draw_order = 0;
+			void*					user_data  = nullptr;
 		};
 
 		struct input_layer
@@ -840,8 +892,10 @@ namespace vekt
 		void			   add_input_layer(unsigned int priority, widget* root);
 		void			   remove_input_layer(unsigned int priority);
 		void			   add_rect(const gfx_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data);
-		void			   add_text(const gfx_text& text, unsigned int draw_order, void* user_data);
-		draw_buffer*	   get_draw_buffer_temp(unsigned int draw_order, void* user_data);
+		void			   add_text(const gfx_text& text, const vec2& position, unsigned int draw_order, void* user_data);
+		vec2			   get_text_size(const gfx_text& text);
+		basic_draw_buffer* get_draw_buffer_temp(unsigned int draw_order, void* user_data);
+		text_draw_buffer*  get_draw_buffer_text(unsigned int draw_order, void* user_data);
 
 		template <typename... Args>
 		widget* allocate(Args&&... args)
@@ -857,16 +911,17 @@ namespace vekt
 		void generate_rounded_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max, float rounding, int segments);
 		void generate_sharp_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max);
 		void generate_offset_path(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount);
-		void add_strip(draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size);
-		void add_filled_rect(draw_buffer* db, unsigned int start, unsigned int size);
-		void add_vertices(draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max);
-		void add_vertices_aa(draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha);
+		void add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size);
+		void add_filled_rect(basic_draw_buffer* db, unsigned int start, unsigned int size);
+		void add_vertices(basic_draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max);
+		void add_vertices_aa(basic_draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max);
 
 	private:
-		pool<widget>			_widget_pool;
-		pod_vector<input_layer> _input_layers;
-		pod_vector<draw_buffer> _draw_buffers;
-		widget*					_root = nullptr;
+		pool<widget>				  _widget_pool;
+		pod_vector<input_layer>		  _input_layers;
+		pod_vector<basic_draw_buffer> _basic_draw_buffers;
+		pod_vector<text_draw_buffer>  _text_draw_buffers;
+		widget*						  _root = nullptr;
 	};
 
 	class atlas;
@@ -1199,7 +1254,7 @@ namespace vekt
 	void widget::draw_pass(builder& builder)
 	{
 		if (_widget_gfx.type == gfx_type::rect) { builder.add_rect(_widget_gfx.get_data<gfx_rect>(), _widget_data.final_pos, _widget_data.final_pos + _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data); }
-		else if (_widget_gfx.type == gfx_type::text) { builder.add_text(_widget_gfx.get_data<gfx_text>(), _widget_gfx.draw_order, _widget_gfx.user_data); }
+		else if (_widget_gfx.type == gfx_type::text) { builder.add_text(_widget_gfx.get_data<gfx_text>(), _widget_data.final_pos, _widget_gfx.draw_order, _widget_gfx.user_data); }
 	}
 
 	void widget::draw_pass_children(builder& builder)
@@ -1223,12 +1278,19 @@ namespace vekt
 	{
 		ASSERT(_root);
 
-		for (draw_buffer& db : _draw_buffers)
+		for (basic_draw_buffer& db : _basic_draw_buffers)
 		{
 			db.vertices.resize(0);
 			db.indices.resize(0);
 		}
-		_draw_buffers.resize(0);
+
+		for (text_draw_buffer& db : _text_draw_buffers)
+		{
+			db.vertices.resize(0);
+			db.indices.resize(0);
+		}
+		_basic_draw_buffers.resize(0);
+		_text_draw_buffers.resize(0);
 
 		_root->size_pass();
 		_root->size_pass_children();
@@ -1336,7 +1398,7 @@ namespace vekt
 
 	void builder::add_rect(const gfx_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data)
 	{
-		builder::draw_buffer* db = get_draw_buffer_temp(draw_order, user_data);
+		builder::basic_draw_buffer* db = get_draw_buffer_temp(draw_order, user_data);
 
 		pod_vector<vec2> outer_path;
 		pod_vector<vec2> inner_path;
@@ -1373,12 +1435,12 @@ namespace vekt
 			{
 				// outer aa
 				const unsigned int out_aa_start = db->vertices.size();
-				add_vertices_aa(db, aa_outermost_path, out_start, 0.0f);
+				add_vertices_aa(db, aa_outermost_path, out_start, 0.0f, min, max);
 				add_strip(db, out_aa_start, out_start, aa_outermost_path.size());
 
 				// inner aa
 				const unsigned int in_aa_start = db->vertices.size();
-				add_vertices_aa(db, aa_innermost_path, in_start, 0.0f);
+				add_vertices_aa(db, aa_innermost_path, in_start, 0.0f, min, max);
 				add_strip(db, in_start, in_aa_start, aa_innermost_path.size());
 			}
 		}
@@ -1391,23 +1453,139 @@ namespace vekt
 			if (has_aa)
 			{
 				const unsigned int out_aa_start = db->vertices.size();
-				add_vertices_aa(db, aa_outermost_path, out_start, 0.0f);
+				add_vertices_aa(db, aa_outermost_path, out_start, 0.0f, min, max);
 				add_strip(db, out_aa_start, out_start, aa_outermost_path.size());
 			}
 		}
 	}
 
-	void builder::add_text(const gfx_text& text, unsigned int draw_order, void* user_data) {}
-
-	builder::draw_buffer* builder::get_draw_buffer_temp(unsigned int draw_order, void* user_data)
+	void builder::add_text(const gfx_text& text, const vec2& position, unsigned int draw_order, void* user_data)
 	{
-		for (builder::draw_buffer& db : _draw_buffers)
+		builder::basic_draw_buffer* db			= get_draw_buffer_temp(draw_order, user_data);
+		const float					pixel_scale = text.target_font->_scale;
+
+		float pen_x = position.x;
+		float pen_y = position.y;
+
+		const vec2 size = get_text_size(text);
+		const vec2 max	= position + vec2(size.x, -size.y);
+
+		const unsigned int start_vertices_idx = db->vertices.size();
+		const unsigned int start_indices_idx  = db->indices.size();
+		const unsigned int char_count		  = static_cast<unsigned int>(strlen(reinterpret_cast<const char*>(text.text)));
+		db->vertices.resize(start_vertices_idx + char_count * 4);
+		db->indices.resize(start_indices_idx + char_count * 6);
+
+		unsigned int vtx_counter = 0;
+		unsigned int idx_counter = 0;
+
+		auto draw_char = [&](const glyph& g, unsigned long c) {
+			const float quad_left	= pen_x + g.x_offset;
+			const float quad_top	= pen_y - g.y_offset;
+			const float quad_right	= quad_left + g.width;
+			const float quad_bottom = quad_top + g.height;
+
+			vertex_text v0 = {
+				.pos = {quad_left, quad_top},
+			};
+
+			vertex_text v1 = {
+				.pos = {quad_right, quad_top},
+			};
+
+			vertex_text v2 = {
+				.pos = {quad_right, quad_bottom},
+			};
+
+			vertex_text v3 = {
+				.pos = {quad_left, quad_bottom},
+			};
+
+#if defined VEKT_VERTEX_TEXT_PC || defined VEKT_VERTEX_TEXT_PCU
+			v0.color = text.color_start;
+			v1.color = text.color_direction == direction::horizontal ? text.color_end : text.color_start;
+			v2.color = text.color_end;
+			v3.color = text.color_direction == direction::horizontal ? text.color_start : text.color_end;
+#endif
+
+#if defined VEKT_VERTEX_TEXT_PU || defined VEKT_VERTEX_TEXT_PCU
+			v0.uv = vec2(g.u0, g.v0);
+			v1.uv = vec2(g.u1, g.v0);
+			v2.uv = vec2(g.u1, g.v1);
+			v2.uv = vec2(g.u0, g.v1);
+#endif
+
+			db->vertices[start_vertices_idx + vtx_counter]	   = v0;
+			db->vertices[start_vertices_idx + vtx_counter + 1] = v1;
+			db->vertices[start_vertices_idx + vtx_counter + 2] = v2;
+			db->vertices[start_vertices_idx + vtx_counter + 3] = v3;
+
+			db->indices[start_indices_idx + idx_counter]	 = start_vertices_idx + vtx_counter;
+			db->indices[start_indices_idx + idx_counter + 1] = start_vertices_idx + vtx_counter + 1;
+			db->indices[start_indices_idx + idx_counter + 2] = start_vertices_idx + vtx_counter + 3;
+
+			db->indices[start_indices_idx + idx_counter + 3] = start_vertices_idx + vtx_counter + 1;
+			db->indices[start_indices_idx + idx_counter + 4] = start_vertices_idx + vtx_counter + 2;
+			db->indices[start_indices_idx + idx_counter + 5] = start_vertices_idx + vtx_counter + 3;
+
+			vtx_counter += 4;
+			idx_counter += 6;
+
+			pen_x += g.advance_x * pixel_scale;
+		};
+
+		const uint8_t* c;
+		for (c = (uint8_t*)text.text; *c; c++)
+		{
+			auto character = *c;
+			auto ch		   = text.target_font->glyph_info[character];
+			draw_char(ch, character);
+		}
+	}
+
+	vec2 builder::get_text_size(const gfx_text& text)
+	{
+		const float pixel_scale = text.target_font->_scale;
+
+		float total_x = 0.0f;
+		float max_y	  = 0.0f;
+
+		auto calc = [&](const glyph& g, unsigned long c) {
+			total_x += g.width + g.advance_x * pixel_scale + static_cast<float>(text.spacing);
+			max_y = math::max(max_y, static_cast<float>(g.height));
+		};
+
+		const uint8_t* c;
+		for (c = (uint8_t*)text.text; *c; c++)
+		{
+			auto character = *c;
+			auto ch		   = text.target_font->glyph_info[character];
+			calc(ch, character);
+		}
+
+		return {total_x, max_y};
+	}
+
+	builder::basic_draw_buffer* builder::get_draw_buffer_temp(unsigned int draw_order, void* user_data)
+	{
+		for (builder::basic_draw_buffer& db : _basic_draw_buffers)
 		{
 			if (db.draw_order == draw_order && db.user_data == user_data) { return &db; }
 		}
 
-		_draw_buffers.push_back({});
-		return &_draw_buffers[_draw_buffers.size() - 1];
+		_basic_draw_buffers.push_back({});
+		return &_basic_draw_buffers[_basic_draw_buffers.size() - 1];
+	}
+
+	builder::text_draw_buffer* builder::get_draw_buffer_text(unsigned int draw_order, void* user_data)
+	{
+		for (builder::text_draw_buffer& db : _text_draw_buffers)
+		{
+			if (db.draw_order == draw_order && db.user_data == user_data) { return &db; }
+		}
+
+		_text_draw_buffers.push_back({});
+		return &_text_draw_buffers[_basic_draw_buffers.size() - 1];
 	}
 
 	void builder::generate_offset_path(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount)
@@ -1429,7 +1607,7 @@ namespace vekt
 		}
 	}
 
-	void builder::add_strip(draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size)
+	void builder::add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size)
 	{
 		for (unsigned int i = 0; i < size - 1; i++)
 		{
@@ -1447,7 +1625,7 @@ namespace vekt
 		}
 	}
 
-	void builder::add_filled_rect(draw_buffer* db, unsigned int start, unsigned int size)
+	void builder::add_filled_rect(basic_draw_buffer* db, unsigned int start, unsigned int size)
 	{
 		if (size != 4) return;
 
@@ -1460,34 +1638,50 @@ namespace vekt
 		db->indices.push_back(start + 3);
 	}
 
-	void builder::add_vertices_aa(draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha)
+	void builder::add_vertices_aa(basic_draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max)
 	{
 		const unsigned int start_vtx_idx = db->vertices.size();
 		db->vertices.resize(db->vertices.size() + path.size());
 
 		for (unsigned int i = 0; i < path.size(); i++)
 		{
-			vertex& vtx = db->vertices[start_vtx_idx + i];
-			vtx.pos		= path[i];
+			vertex_basic& vtx = db->vertices[start_vtx_idx + i];
+			vtx.pos			  = path[i];
+
+#if defined VEKT_VERTEX_BASIC_PC || defined VEKT_VERTEX_BASIC_PCU
 			vtx.color	= db->vertices[original_vertices_idx + i].color;
 			vtx.color.w = alpha;
+#endif
+
+#if defined VEKT_VERTEX_BASIC_PU || defined VEKT_VERTEX_BASIC_PCU
+			vtx.uv.x = math::remap(vtx.pos.x, min.x, max.x, 0.0f, 1.0f);
+			vtx.uv.y = math::remap(vtx.pos.y, min.y, max.y, 0.0f, 1.0f);
+#endif
 		}
 	}
 
-	void builder::add_vertices(draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max)
+	void builder::add_vertices(basic_draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max)
 	{
 		const unsigned int start_vtx_idx = db->vertices.size();
 		db->vertices.resize(db->vertices.size() + path.size());
 
 		for (unsigned int i = 0; i < path.size(); i++)
 		{
-			vertex& vtx		  = db->vertices[start_vtx_idx + i];
+			vertex_basic& vtx = db->vertices[start_vtx_idx + i];
 			vtx.pos			  = path[i];
+
+#if defined VEKT_VERTEX_BASIC_PC || defined VEKT_VERTEX_BASIC_PCU
 			const float ratio = direction == direction::horizontal ? math::lerp(min.x, max.x, vtx.pos.x) : math::lerp(min.y, max.y, vtx.pos.y);
 			vtx.color.x		  = math::lerp(color_start.x, color_end.x, ratio);
 			vtx.color.y		  = math::lerp(color_start.y, color_end.y, ratio);
 			vtx.color.z		  = math::lerp(color_start.z, color_end.z, ratio);
 			vtx.color.w		  = math::lerp(color_start.w, color_end.w, ratio);
+#endif
+
+#if defined VEKT_VERTEX_BASIC_PU || defined VEKT_VERTEX_BASIC_PCU
+			vtx.uv.x = math::remap(vtx.pos.x, min.x, max.x, 0.0f, 1.0f);
+			vtx.uv.y = math::remap(vtx.pos.y, min.y, max.y, 0.0f, 1.0f);
+#endif
 		}
 	}
 
