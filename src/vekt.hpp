@@ -259,8 +259,14 @@ namespace vekt
 		error
 	};
 
-	typedef void (*log_callback)(log_verbosity, const char*, ...);
+#define V_LOG(...)                                                                                                                                                                                                                                                 \
+	if (config.on_log) config.on_log(log_verbosity::info, __VA_ARGS__)
+#define V_ERR(...)                                                                                                                                                                                                                                                 \
+	if (config.on_log) config.on_log(log_verbosity::error, __VA_ARGS__)
+#define V_WARN(...)                                                                                                                                                                                                                                                \
+	if (config.on_log) config.on_log(log_verbosity::warning, __VA_ARGS__)
 
+	typedef void (*log_callback)(log_verbosity, const char*, ...);
 	struct config_data
 	{
 		log_callback on_log		  = nullptr;
@@ -269,13 +275,6 @@ namespace vekt
 	};
 
 	extern config_data config;
-
-#define V_LOG(...)                                                                                                                                                                                                                                                 \
-	if (config.on_log) config.on_log(log_verbosity::info, __VA_ARGS__)
-#define V_ERR(...)                                                                                                                                                                                                                                                 \
-	if (config.on_log) config.on_log(log_verbosity::error, __VA_ARGS__)
-#define V_WARN(...)                                                                                                                                                                                                                                                \
-	if (config.on_log) config.on_log(log_verbosity::warning, __VA_ARGS__)
 
 	struct vec2
 	{
@@ -350,13 +349,6 @@ namespace vekt
 		inline float mag2() { return x * x + y * y; }
 	};
 
-	struct vec4
-	{
-		float x = 0.0f;
-		float y = 0.0f;
-		float z = 0.0f;
-		float w = 0.0f;
-	};
 	class math
 	{
 	public:
@@ -376,6 +368,17 @@ namespace vekt
 		static inline float lerp(float a, float b, float t) { return a + (b - a) * t; }
 		static inline float ceilf(float f) { return std::ceilf(f); }
 		static inline float remap(float val, float from_low, float from_high, float to_low, float to_high) { return to_low + (val - from_low) * (to_high - to_low) / (from_high - from_low); }
+	};
+
+	struct vec4
+	{
+		float x = 0.0f;
+		float y = 0.0f;
+		float z = 0.0f;
+		float w = 0.0f;
+
+		bool equals(const vec4& other) const { return math::equals(x, other.x, 0.1f) && math::equals(y, other.y, 0.1f) && math::equals(z, other.z, 0.1f) && math::equals(w, other.w, 0.1f); }
+		bool is_point_inside(const vec2& point) const { return point.x >= x && point.y <= x + z && point.y >= y && point.y <= y + w; }
 	};
 
 	enum class input_event_type
@@ -422,19 +425,6 @@ namespace vekt
 		wf_pos_anchor_y_end		 = 1 << 20,
 	};
 
-	enum class widget_type
-	{
-		plain,
-		row,
-		column,
-		text,
-		button,
-		slider,
-		dropdown,
-		input,
-		custom,
-	};
-
 	enum class helper_pos_type
 	{
 		absolute,
@@ -465,6 +455,19 @@ namespace vekt
 		end
 	};
 
+	enum class direction
+	{
+		horizontal,
+		vertical
+	};
+
+	enum class gfx_type
+	{
+		none,
+		rect,
+		text,
+	};
+
 	struct mouse_event
 	{
 		input_event_type type	= input_event_type::pressed;
@@ -493,12 +496,6 @@ namespace vekt
 		float right	 = 0.0f;
 	};
 
-	enum class direction
-	{
-		horizontal,
-		vertical
-	};
-
 	struct gfx_rect
 	{
 		vec4		 color_start	 = {};
@@ -507,10 +504,10 @@ namespace vekt
 		unsigned int thickness		 = 0;
 		unsigned int aa_thickness	 = 0;
 		direction	 color_direction = direction::horizontal;
+		bool		 clip_children	 = false;
 	};
 
 	struct font;
-
 	struct gfx_text
 	{
 		const char*	 text			 = nullptr;
@@ -521,17 +518,11 @@ namespace vekt
 		direction	 color_direction = direction::horizontal;
 	};
 
-	enum class gfx_type
-	{
-		none,
-		rect,
-		text,
-	};
-
 	class widget;
 
 	typedef void (*custom_pos_pass)(widget*);
 	typedef void (*custom_size_pass)(widget*);
+	typedef void (*custom_hover)(widget*);
 	typedef input_event_result (*custom_mouse_event)(widget* w, const mouse_event& ev, input_event_phase& phase, widget*& last_widget);
 	typedef input_event_result (*custom_key_event)(widget* w, const key_event& ev, input_event_phase& phase, widget*& last_widget);
 	typedef input_event_result (*custom_mouse_wheel_event)(widget* w, const mouse_wheel_event& ev, input_event_phase& phase, widget*& last_widget);
@@ -539,19 +530,21 @@ namespace vekt
 	struct widget_data
 	{
 		widget*					 parent			   = nullptr;
+		custom_hover			 on_hover_begin	   = nullptr;
+		custom_hover			 on_hover_end	   = nullptr;
 		custom_mouse_event		 on_mouse		   = nullptr;
 		custom_mouse_wheel_event on_mouse_wheel	   = nullptr;
 		custom_key_event		 on_key			   = nullptr;
 		custom_pos_pass			 custom_pos_pass   = nullptr;
 		custom_size_pass		 custom_size_pass  = nullptr;
 		pod_vector<widget*>		 children		   = {};
-		widget_type				 type			   = widget_type::plain;
 		child_positioning		 child_positioning = child_positioning::none;
 		margins					 margins		   = {};
 		vec2					 pos			   = {};
 		vec2					 size			   = {};
 		vec2					 final_pos		   = {};
 		vec2					 final_size		   = {};
+		vec2					 scroll_offset	   = {};
 		unsigned int			 flags			   = 0;
 		float					 spacing		   = 0.0f;
 	};
@@ -727,6 +720,8 @@ namespace vekt
 		void pos_pass();
 		void pos_pass_children();
 		void pos_pass_post();
+		bool draw_pass_clip_check(class builder& builder);
+		void draw_pass_clip_check_end(class builder& builder);
 		void draw_pass(class builder& builder);
 		void draw_pass_children(class builder& builder);
 
@@ -836,12 +831,8 @@ namespace vekt
 	typedef vertex_puc vertex_basic;
 #endif
 
-#ifdef VEKT_VERTEX_TEXT_P
-	typedef vertex_p vertex_text;
-#elifdef VEKT_VERTEX_TEXT_PU
+#ifdef VEKT_VERTEX_TEXT_PU
 	typedef vertex_pu vertex_text;
-#elifdef VEKT_VERTEX_TEXT_PC
-	typedef vertex_pc vertex_text;
 #else
 	typedef vertex_puc vertex_text;
 #endif
@@ -857,6 +848,7 @@ namespace vekt
 			pod_vector<index>		 indices;
 			unsigned int			 draw_order = 0;
 			void*					 user_data	= nullptr;
+			vec4					 clip		= vec4();
 		};
 
 		struct text_draw_buffer
@@ -865,7 +857,11 @@ namespace vekt
 			pod_vector<index>		indices;
 			unsigned int			draw_order = 0;
 			void*					user_data  = nullptr;
+			vec4					clip	   = vec4();
 		};
+
+		typedef void (*draw_basic_callback)(const basic_draw_buffer& db);
+		typedef void (*draw_text_callback)(const text_draw_buffer& db);
 
 		struct input_layer
 		{
@@ -885,7 +881,9 @@ namespace vekt
 
 		void			   init(const init_config& conf);
 		void			   uninit();
-		void			   build();
+		void			   build(const vec2& screen_size);
+		void			   flush();
+		void			   on_mouse_move(const vec2& mouse);
 		input_event_result on_mouse_event(const mouse_event& ev);
 		input_event_result on_mouse_wheel_event(const mouse_wheel_event& ev);
 		input_event_result on_key_event(const key_event& ev);
@@ -894,8 +892,17 @@ namespace vekt
 		void			   add_rect(const gfx_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data);
 		void			   add_text(const gfx_text& text, const vec2& position, unsigned int draw_order, void* user_data);
 		vec2			   get_text_size(const gfx_text& text);
-		basic_draw_buffer* get_draw_buffer_temp(unsigned int draw_order, void* user_data);
+		basic_draw_buffer* get_draw_buffer_basic(unsigned int draw_order, void* user_data);
 		text_draw_buffer*  get_draw_buffer_text(unsigned int draw_order, void* user_data);
+		void			   push_to_clip_stack(const vec4& rect);
+		void			   pop_clip_stack();
+		vec4			   calculate_intersection(const vec4& clip0, const vec4& clip1) const;
+
+		inline vec4 get_current_clip() const { return _clip_stack.empty() ? vec4() : _clip_stack[_clip_stack.size() - 1]; }
+
+		inline void set_root(widget* root) { _root = root; }
+		inline void set_on_draw_basic(draw_basic_callback cb) { _on_draw_basic = cb; }
+		inline void set_on_draw_text(draw_text_callback cb) { _on_draw_text = cb; }
 
 		template <typename... Args>
 		widget* allocate(Args&&... args)
@@ -904,24 +911,33 @@ namespace vekt
 			return w;
 		}
 
-		inline void deallocate(widget* w) { _widget_pool.deallocate(w); }
-		inline void set_root(widget* root) { _root = root; }
+		inline void deallocate(widget* w)
+		{
+			if (w == _last_hovered) _last_hovered = nullptr;
+			_widget_pool.deallocate(w);
+		}
 
 	private:
-		void generate_rounded_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max, float rounding, int segments);
-		void generate_sharp_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max);
-		void generate_offset_path(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount);
-		void add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size);
-		void add_filled_rect(basic_draw_buffer* db, unsigned int start, unsigned int size);
-		void add_vertices(basic_draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max);
-		void add_vertices_aa(basic_draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max);
+		void	generate_rounded_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max, float rounding, int segments);
+		void	generate_sharp_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max);
+		void	generate_offset_path(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount);
+		void	add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size);
+		void	add_filled_rect(basic_draw_buffer* db, unsigned int start, unsigned int size);
+		void	add_vertices(basic_draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max);
+		void	add_vertices_aa(basic_draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max);
+		void	determine_hover_state();
+		widget* find_widget_at(widget* current_widget, const vec2& mouse);
 
 	private:
 		pool<widget>				  _widget_pool;
+		pod_vector<vec4>			  _clip_stack;
 		pod_vector<input_layer>		  _input_layers;
 		pod_vector<basic_draw_buffer> _basic_draw_buffers;
 		pod_vector<text_draw_buffer>  _text_draw_buffers;
-		widget*						  _root = nullptr;
+		widget*						  _root			 = nullptr;
+		widget*						  _last_hovered	 = nullptr;
+		draw_basic_callback			  _on_draw_basic = nullptr;
+		draw_text_callback			  _on_draw_text	 = nullptr;
 	};
 
 	class atlas;
@@ -1137,6 +1153,8 @@ namespace vekt
 				child_y += _widget_data.spacing;
 			}
 		}
+
+		if (_widget_data.parent) _widget_data.final_pos += _widget_data.parent->_widget_data.scroll_offset;
 	}
 
 	void widget::size_pass()
@@ -1251,6 +1269,18 @@ namespace vekt
 			_widget_data.final_size.y = _widget_data.final_size.x * (_widget_data.flags & widget_flags::wf_size_y_relative ? _widget_data.size.y : 1.0f);
 	}
 
+	bool widget::draw_pass_clip_check(builder& builder)
+	{
+		if (_widget_gfx.type == gfx_type::rect && _widget_gfx.gfx.rect.clip_children)
+		{
+			const vec4 effective_clip = builder.calculate_intersection(builder.get_current_clip(), {_widget_data.final_pos.x, _widget_data.final_pos.y, _widget_data.final_size.x, _widget_data.final_size.y});
+			if (effective_clip.z <= 0 || effective_clip.w <= 0) return true;
+			builder.push_to_clip_stack(effective_clip);
+		}
+
+		return false;
+	}
+
 	void widget::draw_pass(builder& builder)
 	{
 		if (_widget_gfx.type == gfx_type::rect) { builder.add_rect(_widget_gfx.get_data<gfx_rect>(), _widget_data.final_pos, _widget_data.final_pos + _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data); }
@@ -1261,9 +1291,19 @@ namespace vekt
 	{
 		for (widget* w : _widget_data.children)
 		{
-			w->draw_pass(builder);
-			w->draw_pass_children(builder);
+			const bool clipped = w->draw_pass_clip_check(builder);
+			if (!clipped)
+			{
+				w->draw_pass(builder);
+				w->draw_pass_children(builder);
+				w->draw_pass_clip_check_end(builder);
+			}
 		}
+	}
+
+	void widget::draw_pass_clip_check_end(builder& builder)
+	{
+		if (_widget_gfx.type == gfx_type::rect && _widget_gfx.gfx.rect.clip_children) builder.pop_clip_stack();
 	}
 
 	void builder::init(const init_config& conf)
@@ -1274,10 +1314,11 @@ namespace vekt
 
 	void builder::uninit() { _widget_pool.clear(); }
 
-	void builder::build()
+	void builder::build(const vec2& screen_size)
 	{
 		ASSERT(_root);
 
+		/* clear draw buffers */
 		for (basic_draw_buffer& db : _basic_draw_buffers)
 		{
 			db.vertices.resize(0);
@@ -1291,15 +1332,78 @@ namespace vekt
 		}
 		_basic_draw_buffers.resize(0);
 		_text_draw_buffers.resize(0);
+		_clip_stack.resize(0);
 
+		/* size & pos & draw */
+		builder& bd				 = *this;
+		_root->_widget_data.pos	 = {0.0f, 0.0f};
+		_root->_widget_data.size = screen_size;
 		_root->size_pass();
 		_root->size_pass_children();
 		_root->size_pass_post();
 		_root->pos_pass();
 		_root->pos_pass_children();
 		_root->pos_pass_post();
-		_root->draw_pass(*this);
-		_root->draw_pass_children(*this);
+
+		determine_hover_state();
+
+		push_to_clip_stack({0.0f, 0.0f, screen_size.x, screen_size.y});
+		_root->draw_pass(bd);
+		_root->draw_pass_children(bd);
+		pop_clip_stack();
+	}
+
+	void builder::flush()
+	{
+		/* flush */
+		std::sort(_basic_draw_buffers.begin(), _basic_draw_buffers.end(), [](const builder::basic_draw_buffer& a, const builder::basic_draw_buffer& b) { return a.draw_order < b.draw_order; });
+		std::sort(_text_draw_buffers.begin(), _text_draw_buffers.end(), [](const builder::text_draw_buffer& a, const builder::text_draw_buffer& b) { return a.draw_order < b.draw_order; });
+		auto basic_it = _basic_draw_buffers.begin();
+		auto text_it  = _text_draw_buffers.begin();
+
+		while (basic_it != _basic_draw_buffers.end() && text_it != _text_draw_buffers.end())
+		{
+			if (basic_it->draw_order <= text_it->draw_order)
+			{
+				if (_on_draw_basic) _on_draw_basic(*basic_it);
+				++basic_it;
+			}
+			else
+			{
+				if (_on_draw_text) _on_draw_text(*text_it);
+				++text_it;
+			}
+		}
+
+		if (_on_draw_basic)
+		{
+			for (; basic_it != _basic_draw_buffers.end(); ++basic_it)
+			{
+				_on_draw_basic(*basic_it);
+			}
+		}
+
+		if (_on_draw_text)
+		{
+			for (; text_it != _text_draw_buffers.end(); ++text_it)
+			{
+				_on_draw_text(*text_it);
+			}
+		}
+	}
+
+	void builder::on_mouse_move(const vec2& mouse)
+	{
+		widget* current_hovered_widget = find_widget_at(_root, mouse);
+
+		if (current_hovered_widget != _last_hovered)
+		{
+			if (_last_hovered != nullptr && _last_hovered->_widget_data.on_hover_end) { _last_hovered->_widget_data.on_hover_end(_last_hovered); }
+			if (current_hovered_widget != nullptr && current_hovered_widget->_widget_data.on_hover_begin) { current_hovered_widget->_widget_data.on_hover_begin(current_hovered_widget); }
+			_last_hovered = current_hovered_widget;
+		}
+
+		// if (current_hovered_widget != nullptr && current_hovered_widget->onMouseMove) { current_hovered_widget->onMouseMove(mouseX, mouseY); }
 	}
 
 	input_event_result builder::on_mouse_event(const mouse_event& ev)
@@ -1398,7 +1502,7 @@ namespace vekt
 
 	void builder::add_rect(const gfx_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data)
 	{
-		builder::basic_draw_buffer* db = get_draw_buffer_temp(draw_order, user_data);
+		builder::basic_draw_buffer* db = get_draw_buffer_basic(draw_order, user_data);
 
 		pod_vector<vec2> outer_path;
 		pod_vector<vec2> inner_path;
@@ -1461,8 +1565,8 @@ namespace vekt
 
 	void builder::add_text(const gfx_text& text, const vec2& position, unsigned int draw_order, void* user_data)
 	{
-		builder::basic_draw_buffer* db			= get_draw_buffer_temp(draw_order, user_data);
-		const float					pixel_scale = text.target_font->_scale;
+		builder::text_draw_buffer* db		   = get_draw_buffer_text(draw_order, user_data);
+		const float				   pixel_scale = text.target_font->_scale;
 
 		float pen_x = position.x;
 		float pen_y = position.y;
@@ -1566,26 +1670,50 @@ namespace vekt
 		return {total_x, max_y};
 	}
 
-	builder::basic_draw_buffer* builder::get_draw_buffer_temp(unsigned int draw_order, void* user_data)
+	builder::basic_draw_buffer* builder::get_draw_buffer_basic(unsigned int draw_order, void* user_data)
 	{
+		const vec4& clip = get_current_clip();
 		for (builder::basic_draw_buffer& db : _basic_draw_buffers)
 		{
-			if (db.draw_order == draw_order && db.user_data == user_data) { return &db; }
+			if (db.clip.equals(clip) && db.draw_order == draw_order && db.user_data == user_data) { return &db; }
 		}
 
 		_basic_draw_buffers.push_back({});
-		return &_basic_draw_buffers[_basic_draw_buffers.size() - 1];
+		basic_draw_buffer* db = &_basic_draw_buffers[_basic_draw_buffers.size() - 1];
+		db->draw_order		  = draw_order;
+		db->user_data		  = user_data;
+		db->clip			  = clip;
+
+		return db;
 	}
 
 	builder::text_draw_buffer* builder::get_draw_buffer_text(unsigned int draw_order, void* user_data)
 	{
+		const vec4& clip = get_current_clip();
+
 		for (builder::text_draw_buffer& db : _text_draw_buffers)
 		{
-			if (db.draw_order == draw_order && db.user_data == user_data) { return &db; }
+			if (db.clip.equals(clip) && db.draw_order == draw_order && db.user_data == user_data) { return &db; }
 		}
 
 		_text_draw_buffers.push_back({});
-		return &_text_draw_buffers[_basic_draw_buffers.size() - 1];
+
+		text_draw_buffer* db = &_text_draw_buffers[_basic_draw_buffers.size() - 1];
+		db->draw_order		 = draw_order;
+		db->user_data		 = user_data;
+		db->clip			 = clip;
+		return db;
+	}
+
+	void builder::push_to_clip_stack(const vec4& rect)
+	{
+		vec4 parent_clip = _clip_stack.empty() ? vec4() : _clip_stack[_clip_stack.size() - 1];
+		_clip_stack.push_back(calculate_intersection(parent_clip, rect));
+	}
+
+	void builder::pop_clip_stack()
+	{
+		if (_clip_stack.size() > 1) _clip_stack.remove(_clip_stack.size() - 1);
 	}
 
 	void builder::generate_offset_path(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount)
@@ -1658,6 +1786,56 @@ namespace vekt
 			vtx.uv.y = math::remap(vtx.pos.y, min.y, max.y, 0.0f, 1.0f);
 #endif
 		}
+	}
+
+	void builder::determine_hover_state() {}
+
+	widget* builder::find_widget_at(widget* current_widget, const vec2& mouse)
+	{
+		const bool receives_input = true;
+		if (!current_widget->get_is_visible() || !receives_input) { return nullptr; }
+
+		vec4 active_clip_rect = get_current_clip();
+		if (!active_clip_rect.is_point_inside(mouse)) { return nullptr; }
+
+		const vec4 bounds = vec4{
+			.x = current_widget->_widget_data.final_pos.x,
+			.y = current_widget->_widget_data.final_pos.y,
+			.z = current_widget->_widget_data.final_size.x,
+			.w = current_widget->_widget_data.final_size.y,
+		};
+
+		for (unsigned int i = current_widget->_widget_data.children.size() - 1; i >= 0; --i)
+		{
+			widget* child = current_widget->_widget_data.children[i];
+
+			// We must calculate the clip environment for the child before recursing.
+			// A temporary manager or a push/pop on the existing one works.
+			// This push operation handles the intersection internally.
+			push_to_clip_stack(bounds);
+			widget* hit_widget = find_widget_at(child, mouse);
+			pop_clip_stack();
+
+			// If a child was hit, it's on top. We're done. Return it immediately.
+			if (hit_widget != nullptr) { return hit_widget; }
+		}
+
+		// 4. If no children were hit, check the parent widget itself.
+		if (bounds.is_point_inside(mouse)) { return current_widget; }
+
+		// 5. No hit.
+		return nullptr;
+	}
+
+	vec4 builder::calculate_intersection(const vec4& r1, const vec4& r2) const
+	{
+		float x		 = math::max(r1.x, r2.x);
+		float y		 = math::max(r1.y, r2.y);
+		float right	 = math::min(r1.x + r1.z, r2.x + r2.z);
+		float bottom = math::min(r1.y + r1.w, r2.y + r2.w);
+
+		if (right < x || bottom < y) { return vec4(); }
+		return {x, y, right - x, bottom - y};
 	}
 
 	void builder::add_vertices(basic_draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max)
