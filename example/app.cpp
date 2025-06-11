@@ -6,6 +6,7 @@
 #include "glfw_window.hpp"
 #include "gl_backend.hpp"
 #include <iostream>
+#include <glfw/glfw3.h>
 
 // VEKT_VERTEX_BASIC_P
 // VEKT_VERTEX_BASIC_PC
@@ -34,8 +35,12 @@ void app::init()
 	_vekt_builder->set_root(_vekt_root);
 	_vekt_builder->add_input_layer(0, _vekt_root);
 
-	_window.init(800, 600);
+	_screen_width  = 800;
+	_screen_height = 600;
+	_window.init(_screen_width, _screen_height);
 	_backend.init(*_vekt_builder);
+
+	create_some_widgets();
 }
 
 void app::uninit()
@@ -82,6 +87,19 @@ void app::on_key(int key, int scancode, int action)
 	else
 		type = vekt::input_event_type::repeated;
 
+	if (type == vekt::input_event_type::pressed && key == GLFW_KEY_T) _backend.set_wireframe_mode(!_backend.get_wireframe_mode());
+	if (type == vekt::input_event_type::pressed && key == GLFW_KEY_Z)
+	{
+		_backend.set_zoom(1.0f);
+		_backend.set_debug_offset(0.0f, 0);
+		_backend.set_debug_offset(0.0f, 1);
+	}
+
+	if (type != vekt::input_event_type::released && key == GLFW_KEY_D) _backend.set_debug_offset(_backend.get_debug_offset(0) + 12.1f, 0);
+	if (type != vekt::input_event_type::released && key == GLFW_KEY_A) _backend.set_debug_offset(_backend.get_debug_offset(0) - 12.1f, 0);
+	if (type != vekt::input_event_type::released && key == GLFW_KEY_W) _backend.set_debug_offset(_backend.get_debug_offset(1) - 12.1f, 1);
+	if (type != vekt::input_event_type::released && key == GLFW_KEY_S) _backend.set_debug_offset(_backend.get_debug_offset(1) + 12.1f, 1);
+
 	_vekt_builder->on_key_event({
 		.type	   = type,
 		.key	   = key,
@@ -109,6 +127,8 @@ void app::on_mouse(int button, int action)
 
 void app::on_mouse_wheel(float y)
 {
+	_backend.set_zoom(_backend.get_zoom() - y * 0.07f);
+
 	_vekt_builder->on_mouse_wheel_event({
 		.amount = y,
 	});
@@ -119,4 +139,22 @@ void app::on_mouse_cursor(float x, float y)
 	_mouse_x = x;
 	_mouse_y = y;
 	_vekt_builder->on_mouse_move({x, y});
+}
+
+void app::create_some_widgets()
+{
+	vekt::widget* some_bg = _vekt_builder->allocate();
+	some_bg->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+	some_bg->set_pos_y(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+	some_bg->set_width(0.5f, vekt::helper_size_type::relative);
+	some_bg->set_height(0.5f, vekt::helper_size_type::relative);
+	some_bg->get_data_gfx().type = vekt::gfx_type::rect;
+	vekt::gfx_rect& rect		 = some_bg->get_data_gfx().gfx.rect;
+	rect.color_start			 = vekt::vec4(0.0f, 0.2f, 0.2f, 1.0f);
+	rect.color_end				 = vekt::vec4(0.2f, 0.6f, 0.6f, 1.0f);
+	rect.rounding = 36.0f;
+//	rect.thickness				 = 24;
+//rect.aa_thickness			 = 2;
+
+	_vekt_root->add_child(some_bg);
 }

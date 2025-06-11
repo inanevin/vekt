@@ -9,6 +9,7 @@
 #include <cmath>
 #include <fstream>
 #include <functional>
+#include <utility> // For std::swap, std::move
 
 #define VEKT_INLINE inline
 #define VEKT_API	extern
@@ -20,7 +21,8 @@ namespace vekt
 	// :: COMMON DEFINES
 	////////////////////////////////////////////////////////////////////////////////
 
-#define M_PI 3.14159265358979
+#define M_PI	  3.14159265358979f
+#define DEG_2_RAD 0.0174533f
 #ifndef VEKT_USER_DATA_SIZE
 #define VEKT_USER_DATA_SIZE 1024
 #endif
@@ -34,10 +36,12 @@ namespace vekt
 #define ALIGNED_FREE(PTR)		  std::free(PTR)
 #endif
 
-#define MALLOC(SZ)	malloc(SZ)
-#define MEMCPY(...) memcpy(__VA_ARGS__)
-#define FREE(X)		free(X)
-#define ASSERT(...) assert(__VA_ARGS__)
+#define MEMMOVE(...) memmove(__VA_ARGS__)
+#define MALLOC(SZ)	 malloc(SZ)
+#define REALLOC(...) realloc(__VA_ARGS__)
+#define MEMCPY(...)	 memcpy(__VA_ARGS__)
+#define FREE(X)		 free(X)
+#define ASSERT(...)	 assert(__VA_ARGS__)
 
 	////////////////////////////////////////////////////////////////////////////////
 	// :: LOGS & CONFIGS
@@ -77,17 +81,44 @@ namespace vekt
 	class pod_vector
 	{
 	public:
-		using iterator		 = T*;
-		using const_iterator = const T*;
+		using iterator								   = T*;
+		using const_iterator						   = const T*;
+		static constexpr unsigned int initial_capacity = 4;
 
 		pod_vector() {};
 		pod_vector(const pod_vector<T>& other)
 		{
-			_elements = reinterpret_cast<T*>(ALIGNED_MALLOC(sizeof(T) * static_cast<size_t>(other._capacity), alignof(T)));
-			MEMCPY(_elements, other._elements, sizeof(T) * static_cast<size_t>(other._count));
-			_count	  = other._count;
+			if (other.empty()) { return; }
+
 			_capacity = other._capacity;
+			_elements = reinterpret_cast<T*>(MALLOC(_capacity * sizeof(T)));
+			if (!_elements) throw std::bad_alloc();
+
+			for (unsigned int i = 0; i < other._count; ++i)
+			{
+				new (&_elements[i]) T(other._elements[i]);
+			}
+			_count = other._count;
 		}
+
+		pod_vector<T>& operator=(const pod_vector<T>& other)
+		{
+			if (this == &other) { return *this; }
+
+			clear();
+
+			if (other.empty()) { return *this; }
+
+			_capacity = other._capacity;
+			_elements = reinterpret_cast<T*>(MALLOC(_capacity * sizeof(T)));
+			if (!_elements) { throw std::bad_alloc(); }
+
+			_count = other._count;
+			MEMCPY(_elements, other._elements, _count * sizeof(T));
+
+			return *this;
+		}
+
 		~pod_vector() { clear(); }
 
 		inline void push_back(const T& elem)
@@ -97,54 +128,100 @@ namespace vekt
 			_count++;
 		}
 
+		inline void push_back(T&& elem)
+		{
+			check_grow();
+			new (&_elements[_count]) T(std::move(elem));
+			_count++;
+		}
+
 		inline void remove(unsigned int index)
 		{
-			ASSERT(index < _count);
-			ASSERT(_elements);
+			if (index >= _count) { return; }
+			_elements[index].~T();
 
-			const size_t dest_index		  = static_cast<size_t>(index);
-			const size_t move_start_index = static_cast<size_t>(index) + 1;
-			const size_t move_count		  = static_cast<size_t>(_count - index - 1);
-			if (move_count != 0) MEMCPY(_elements + dest_index, _elements + move_start_index, sizeof(T) * move_count);
+			if (index < _count - 1)
+			{
+				for (unsigned int i = index; i < _count - 1; ++i)
+					_elements[i] = std::move(_elements[i + 1]);
+			}
 			_count--;
 		}
 
 		inline void remove(T& elem)
 		{
-			for (unsigned int i = 0; i < _count; i++)
+			for (unsigned int i = 0; i < _count; ++i)
 			{
-				if (elem == _elements[i])
+				if (_elements[i] == elem)
 				{
 					remove(i);
-					break;
+					return;
 				}
 			}
 		}
 		inline void clear()
 		{
-			for (size_t i = 0; i < _count; i++)
+			for (unsigned int i = 0; i < _count; ++i)
 				_elements[i].~T();
 
-			if (_elements) ALIGNED_FREE(_elements);
-			_capacity = 0;
-			_count	  = 0;
+			if (_elements) { FREE(_elements); }
 			_elements = nullptr;
+			_count	  = 0;
+			_capacity = 0;
+		}
+
+		inline void reserve(unsigned int new_capacity)
+		{
+			if (new_capacity <= _capacity) { return; }
+
+			T* new_elements = (T*)MALLOC(new_capacity * sizeof(T));
+			if (!new_elements) { throw std::bad_alloc(); }
+
+			for (unsigned int i = 0; i < _count; ++i)
+			{
+				new (&new_elements[i]) T(std::move(_elements[i]));
+				_elements[i].~T();
+			}
+
+			if (_elements) { FREE(_elements); }
+
+			_elements = new_elements;
+			_capacity = new_capacity;
 		}
 
 		inline void resize(unsigned int sz)
 		{
-			T* new_elems = reinterpret_cast<T*>(ALIGNED_MALLOC(sizeof(T) * static_cast<size_t>(sz), alignof(T)));
-
-			if (_elements)
+			// Handle destructors if shrinking.
+			if (sz < _count)
 			{
-				MEMCPY(new_elems, _elements, sizeof(T) * static_cast<size_t>(_count > sz ? sz : _count));
-				ALIGNED_FREE(_elements);
+				for (unsigned int i = sz; i < _count; ++i)
+					_elements[i].~T();
 			}
-			_elements = new_elems;
 
-			if (_count > sz) _count = sz;
+			if (sz > _capacity)
+			{
+				T* new_elements = (T*)malloc(sz * sizeof(T));
+				if (!new_elements) throw std::bad_alloc();
 
-			_capacity = sz;
+				// Move existing elements
+				for (unsigned int i = 0; i < _count; ++i)
+				{
+					new (&new_elements[i]) T(std::move(_elements[i]));
+					_elements[i].~T();
+				}
+
+				FREE(_elements);
+				_elements = new_elements;
+				_capacity = sz;
+			}
+
+			// If growing, the new elements are default-constructed
+			if (sz > _count)
+			{
+				for (unsigned int i = _count; i < sz; ++i)
+					new (&_elements[i]) T();
+			}
+			_count = sz;
 		}
 
 		inline T* data() { return _elements; }
@@ -164,17 +241,11 @@ namespace vekt
 	private:
 		inline void check_grow()
 		{
-			if (_count < _capacity) return;
-			_capacity	 = _capacity == 0 ? 1 : _capacity * 2;
-			T* new_elems = reinterpret_cast<T*>(ALIGNED_MALLOC(sizeof(T) * static_cast<size_t>(_capacity), alignof(T)));
-
-			if (_elements)
+			if (_count >= _capacity)
 			{
-				MEMCPY(new_elems, _elements, sizeof(T) * _count);
-				ALIGNED_FREE(_elements);
+				unsigned int new_capacity = (_capacity == 0) ? initial_capacity : _capacity * 2;
+				reserve(new_capacity);
 			}
-
-			_elements = new_elems;
 		}
 
 	private:
@@ -337,29 +408,31 @@ namespace vekt
 
 		vec2 operator/=(const vec2& other)
 		{
-			vec2 v = *this;
-			v.x /= other.x;
-			v.y /= other.y;
-			return v;
+			x /= other.x;
+			y /= other.y;
+			return *this;
 		}
 
 		vec2 operator/=(float f)
 		{
-			vec2 v = *this;
-			v.x /= f;
-			v.y /= f;
-			return v;
+			x /= f;
+			y /= f;
+			return *this;
 		}
 
 		vec2 operator*=(float f)
 		{
-			vec2 v = *this;
-			v.x *= f;
-			v.y *= f;
-			return v;
+			x *= f;
+			y *= f;
+			return *this;
 		}
 
-		vec2 operator+=(const vec2& other) { return *this + other; }
+		vec2 operator+=(const vec2& other)
+		{
+			x += other.x;
+			y += other.y;
+			return *this;
+		}
 
 		inline void normalize()
 		{
@@ -409,6 +482,26 @@ namespace vekt
 
 		bool equals(const vec4& other) const { return math::equals(x, other.x, 0.1f) && math::equals(y, other.y, 0.1f) && math::equals(z, other.z, 0.1f) && math::equals(w, other.w, 0.1f); }
 		bool is_point_inside(const vec2& point) const { return point.x >= x && point.y <= x + z && point.y >= y && point.y <= y + w; }
+
+		vec4 operator+(const vec4& other) const
+		{
+			vec4 v = {};
+			v.x	   = x + other.x;
+			v.y	   = y + other.y;
+			v.z	   = z + other.z;
+			v.w	   = w + other.w;
+			return v;
+		}
+
+		vec4 operator*(float f) const
+		{
+			vec4 v = *this;
+			v.x *= f;
+			v.y *= f;
+			v.z *= f;
+			v.w *= f;
+			return v;
+		}
 	};
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -514,7 +607,7 @@ namespace vekt
 	enum class helper_anchor_type
 	{
 		start,
-		middle,
+		center,
 		end
 	};
 
@@ -548,6 +641,7 @@ namespace vekt
 		vec4		 color_start	 = {};
 		vec4		 color_end		 = {};
 		float		 rounding		 = 0.0f;
+		unsigned int segments		 = 0;
 		unsigned int thickness		 = 0;
 		unsigned int aa_thickness	 = 0;
 		direction	 color_direction = direction::horizontal;
@@ -642,7 +736,7 @@ namespace vekt
 
 			switch (anchor)
 			{
-			case helper_anchor_type::middle:
+			case helper_anchor_type::center:
 				_widget_data.flags |= widget_flags::wf_pos_anchor_x_mid;
 				break;
 			case helper_anchor_type::end:
@@ -672,7 +766,7 @@ namespace vekt
 
 			switch (anchor)
 			{
-			case helper_anchor_type::middle:
+			case helper_anchor_type::center:
 				_widget_data.flags |= widget_flags::wf_pos_anchor_y_mid;
 				break;
 			case helper_anchor_type::end:
@@ -979,9 +1073,11 @@ namespace vekt
 		void	generate_rounded_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max, float rounding, int segments);
 		void	generate_sharp_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max);
 		void	generate_offset_path(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount);
-		void	add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size);
+		void	add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size, bool add_ccw);
 		void	add_filled_rect(basic_draw_buffer* db, unsigned int start, unsigned int size);
+		void	add_filled_rect_central(basic_draw_buffer* db, unsigned int start, unsigned int central_start, unsigned int size);
 		void	add_vertices(basic_draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max);
+		void	add_central_vertex(basic_draw_buffer* db, const vec4& color_start, const vec4& color_end, const vec2& min, const vec2& max);
 		void	add_vertices_aa(basic_draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max);
 		widget* find_widget_at(widget* current_widget, const vec2& mouse);
 
@@ -1062,11 +1158,11 @@ namespace vekt
 		unsigned int	   _data_size		 = 0;
 	};
 
+	typedef std::function<void(atlas*)> atlas_cb;
+
 	class font_manager
 	{
 	public:
-		typedef std::function<void(atlas*)> atlas_cb;
-
 		font_manager() {};
 		~font_manager() { ASSERT(_atlases.empty()); };
 
@@ -1177,11 +1273,11 @@ namespace vekt
 			const float parent_height = _widget_data.parent->_widget_data.final_size.y - _widget_data.parent->_widget_data.margins.top - _widget_data.parent->_widget_data.margins.bottom;
 
 			if (_widget_data.flags & widget_flags::wf_pos_anchor_x_end)
-				_widget_data.final_pos.x = (_widget_data.parent->_widget_data.final_pos.y + _widget_data.parent->_widget_data.margins.top) + (parent_height * _widget_data.pos.y) - _widget_data.final_size.y;
+				_widget_data.final_pos.y = (_widget_data.parent->_widget_data.final_pos.y + _widget_data.parent->_widget_data.margins.top) + (parent_height * _widget_data.pos.y) - _widget_data.final_size.y;
 			else if (_widget_data.flags & widget_flags::wf_pos_anchor_x_mid)
-				_widget_data.final_pos.x = (_widget_data.parent->_widget_data.final_pos.y + _widget_data.parent->_widget_data.margins.top) + (parent_height * _widget_data.pos.y) - _widget_data.final_size.y * 0.5f;
+				_widget_data.final_pos.y = (_widget_data.parent->_widget_data.final_pos.y + _widget_data.parent->_widget_data.margins.top) + (parent_height * _widget_data.pos.y) - _widget_data.final_size.y * 0.5f;
 			else
-				_widget_data.final_pos.x = (_widget_data.parent->_widget_data.final_pos.y + _widget_data.parent->_widget_data.margins.top) + (parent_height * _widget_data.pos.y);
+				_widget_data.final_pos.y = (_widget_data.parent->_widget_data.final_pos.y + _widget_data.parent->_widget_data.margins.top) + (parent_height * _widget_data.pos.y);
 		}
 
 		if (_widget_data.custom_pos_pass) _widget_data.custom_pos_pass(this);
@@ -1404,9 +1500,10 @@ namespace vekt
 		_clip_stack.resize(0);
 
 		/* size & pos & draw */
-		builder& bd				 = *this;
-		_root->_widget_data.pos	 = {0.0f, 0.0f};
-		_root->_widget_data.size = screen_size;
+		builder& bd					   = *this;
+		_root->_widget_data.pos		   = {0.0f, 0.0f};
+		_root->_widget_data.size	   = screen_size;
+		_root->get_data_widget().flags = widget_flags::wf_pos_x_absolute | widget_flags::wf_pos_y_absolute | widget_flags::wf_size_x_absolute | widget_flags::wf_size_y_absolute;
 		_root->size_pass();
 		_root->size_pass_children();
 		_root->size_pass_post();
@@ -1611,23 +1708,24 @@ namespace vekt
 		pod_vector<vec2> outer_path;
 		pod_vector<vec2> inner_path;
 
-		if (rect.rounding > 0.0f)
-			generate_rounded_rect(outer_path, min, max, rect.rounding, 36);
+		const bool has_stroke	= rect.thickness > 0;
+		const bool has_aa		= rect.aa_thickness > 0;
+		const bool has_rounding = rect.rounding > 0.0f;
+
+		if (has_rounding)
+			generate_rounded_rect(outer_path, min, max, rect.rounding, rect.segments);
 		else
 			generate_sharp_rect(outer_path, min, max);
 
-		const bool has_stroke = rect.thickness > 0;
-		const bool has_aa	  = rect.aa_thickness > 0;
-
-		if (has_stroke) generate_offset_path(inner_path, outer_path, -static_cast<float>(rect.thickness));
+		if (has_stroke) generate_offset_path(inner_path, outer_path, static_cast<float>(rect.thickness));
 
 		pod_vector<vec2> aa_outermost_path;
 		pod_vector<vec2> aa_innermost_path;
 
 		if (has_aa)
 		{
-			generate_offset_path(aa_outermost_path, outer_path, static_cast<float>(rect.aa_thickness));
-			if (has_stroke && !inner_path.empty()) { generate_offset_path(aa_innermost_path, inner_path, -static_cast<float>(rect.aa_thickness)); }
+			generate_offset_path(aa_outermost_path, outer_path, -static_cast<float>(rect.aa_thickness));
+			if (has_stroke && !inner_path.empty()) { generate_offset_path(aa_innermost_path, inner_path, static_cast<float>(rect.aa_thickness)); }
 		}
 
 		if (has_stroke)
@@ -1637,32 +1735,34 @@ namespace vekt
 			add_vertices(db, outer_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
 			const unsigned int in_start = db->vertices.size();
 			add_vertices(db, inner_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
-			add_strip(db, out_start, in_start, outer_path.size());
+			add_strip(db, out_start, in_start, outer_path.size(), false);
 
 			if (has_aa)
 			{
 				// outer aa
 				const unsigned int out_aa_start = db->vertices.size();
 				add_vertices_aa(db, aa_outermost_path, out_start, 0.0f, min, max);
-				add_strip(db, out_aa_start, out_start, aa_outermost_path.size());
+				add_strip(db, out_aa_start, out_start, aa_outermost_path.size(), false);
 
-				// inner aa
+				//// inner aa
 				const unsigned int in_aa_start = db->vertices.size();
 				add_vertices_aa(db, aa_innermost_path, in_start, 0.0f, min, max);
-				add_strip(db, in_start, in_aa_start, aa_innermost_path.size());
+				add_strip(db, in_start, in_aa_start, aa_innermost_path.size(), false);
 			}
 		}
 		else
 		{
 			const unsigned int out_start = db->vertices.size();
 			add_vertices(db, outer_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
-			add_filled_rect(db, out_start, outer_path.size());
+			const unsigned int central_start = db->vertices.size();
+			add_central_vertex(db, rect.color_start, rect.color_end, min, max);
+			add_filled_rect_central(db, out_start, central_start, outer_path.size());
 
 			if (has_aa)
 			{
 				const unsigned int out_aa_start = db->vertices.size();
 				add_vertices_aa(db, aa_outermost_path, out_start, 0.0f, min, max);
-				add_strip(db, out_aa_start, out_start, aa_outermost_path.size());
+				add_strip(db, out_aa_start, out_start, aa_outermost_path.size(), false);
 			}
 		}
 	}
@@ -1774,21 +1874,38 @@ namespace vekt
 		return {total_x, max_y};
 	}
 
-	void builder::add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size)
+	void builder::add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size, bool add_ccw)
 	{
-		for (unsigned int i = 0; i < size - 1; i++)
+		for (unsigned int i = 0; i < size; i++)
 		{
 			const unsigned int p1_curr = outer_start + i;
 			const unsigned int p1_next = outer_start + (i + 1) % size;
 			const unsigned int p2_curr = inner_start + i;
 			const unsigned int p2_next = inner_start + (i + 1) % size;
 			db->indices.push_back(p1_curr);
-			db->indices.push_back(p1_next);
-			db->indices.push_back(p2_curr);
+
+			if (add_ccw)
+			{
+				db->indices.push_back(p2_curr);
+				db->indices.push_back(p1_next);
+			}
+			else
+			{
+				db->indices.push_back(p1_next);
+				db->indices.push_back(p2_curr);
+			}
 
 			db->indices.push_back(p1_next);
-			db->indices.push_back(p2_next);
-			db->indices.push_back(p2_curr);
+			if (add_ccw)
+			{
+				db->indices.push_back(p2_curr);
+				db->indices.push_back(p2_next);
+			}
+			else
+			{
+				db->indices.push_back(p2_next);
+				db->indices.push_back(p2_curr);
+			}
 		}
 	}
 
@@ -1805,6 +1922,16 @@ namespace vekt
 		db->indices.push_back(start + 3);
 	}
 
+	void builder::add_filled_rect_central(basic_draw_buffer* db, unsigned int start, unsigned int central_start, unsigned int size)
+	{
+		for (unsigned int i = 0; i < size; i++)
+		{
+			db->indices.push_back(central_start);
+			db->indices.push_back(start + i);
+			db->indices.push_back((start + i + 1) % size);
+		}
+	}
+
 	void builder::add_vertices_aa(basic_draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max)
 	{
 		const unsigned int start_vtx_idx = db->vertices.size();
@@ -1818,6 +1945,7 @@ namespace vekt
 #if defined VEKT_VERTEX_BASIC_PC || defined VEKT_VERTEX_BASIC_PCU
 			vtx.color	= db->vertices[original_vertices_idx + i].color;
 			vtx.color.w = alpha;
+
 #endif
 
 #if defined VEKT_VERTEX_BASIC_PU || defined VEKT_VERTEX_BASIC_PCU
@@ -1827,22 +1955,45 @@ namespace vekt
 		}
 	}
 
-	void builder::generate_offset_path(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount)
+	namespace
 	{
-		if (base_path.empty()) return;
+		float calculate_signed_area(const pod_vector<vec2>& path)
+		{
+			float area = 0.0f;
+			for (size_t i = 0; i < path.size(); ++i)
+			{
+				const vec2& p1 = path[i];
+				const vec2& p2 = path[(i + 1) % path.size()];
+				area += (p1.x * p2.y - p2.x * p1.y);
+			}
+			return area * 0.5f;
+		}
+	}
+
+	void builder::generate_offset_path(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float distance)
+	{
+		if (base_path.size() < 2) return;
 		out_path.clear();
 		out_path.resize(base_path.size());
 
-		vec2 center = {};
-		for (const vec2& p : base_path)
-			center += p;
-		center /= static_cast<float>(base_path.size());
+		const size_t num_points = base_path.size();
 
-		for (unsigned int i = 0; i = base_path.size(); i++)
+		for (size_t i = 0; i < num_points; ++i)
 		{
-			const vec2 p	  = base_path[i];
-			const vec2 normal = (p - center).normalized();
-			out_path[i]		  = (p + normal) * amount;
+			// Get the current, previous, and next points
+			const vec2& p_curr = base_path[i];
+			const vec2& p_prev = base_path[(i + num_points - 1) % num_points];
+			const vec2& p_next = base_path[(i + 1) % num_points];
+
+			const vec2 tangent1		= (p_curr - p_prev).normalized();
+			const vec2 tangent2		= (p_next - p_curr).normalized();
+			const vec2 normal1		= {-tangent1.y, tangent1.x};
+			const vec2 normal2		= {-tangent2.y, tangent2.x};
+			const vec2 miter_vector = (normal1 + normal2).normalized();
+
+			// Calculate the offset vertex
+			const vec2 path = p_curr + miter_vector * distance;
+			out_path[i]		= path;
 		}
 	}
 
@@ -1857,7 +2008,7 @@ namespace vekt
 			vtx.pos			  = path[i];
 
 #if defined VEKT_VERTEX_BASIC_PC || defined VEKT_VERTEX_BASIC_PCU
-			const float ratio = direction == direction::horizontal ? math::lerp(min.x, max.x, vtx.pos.x) : math::lerp(min.y, max.y, vtx.pos.y);
+			const float ratio = direction == direction::horizontal ? math::remap(vtx.pos.x, min.x, max.x, 0.0f, 1.0f) : math::remap(vtx.pos.y, min.y, max.y, 0.0f, 1.0f);
 			vtx.color.x		  = math::lerp(color_start.x, color_end.x, ratio);
 			vtx.color.y		  = math::lerp(color_start.y, color_end.y, ratio);
 			vtx.color.z		  = math::lerp(color_start.z, color_end.z, ratio);
@@ -1871,33 +2022,78 @@ namespace vekt
 		}
 	}
 
+	void builder::add_central_vertex(basic_draw_buffer* db, const vec4& color_start, const vec4& color_end, const vec2& min, const vec2& max)
+	{
+		vertex_basic vtx = {};
+		vtx.pos			 = (min + max) * 0.5f;
+
+#if defined VEKT_VERTEX_BASIC_PC || defined VEKT_VERTEX_BASIC_PCU
+		vtx.color = (color_start + color_end) * 0.5f;
+#endif
+
+#if defined VEKT_VERTEX_BASIC_PU || defined VEKT_VERTEX_BASIC_PCU
+		vtx.uv = vec2(0.5f, 0.5f);
+#endif
+		db->vertices.push_back(vtx);
+	}
+
 	void builder::generate_rounded_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max, float r, int segments)
 	{
 		r = math::min(r, math::min((max.x - min.x) * 0.5f, (max.y - min.y) * 0.5f)); // Clamp radius
 
-		// Top-right corner (center: max.x-r, min.y+r)
-		for (int i = 0; i <= segments; ++i)
+		if (segments == 0) segments = 10;
+
+		segments = math::min(math::max(1, segments), 90);
+
+		// top left
 		{
-			float angle = (float)M_PI / 2.0f * ((float)i / segments); // 0 to PI/2
-			out_path.push_back({max.x - r + cos(angle) * r, min.y + r - sin(angle) * r});
+			const vec2 center = vec2(min.x + r, min.y + r);
+			for (int i = 0; i <= segments; ++i)
+			{
+
+				const float target_angle  = DEG_2_RAD * (270.0f + (90.0f / segments) * i);
+				const vec2	point_on_unit = vec2(math::sin(target_angle), -math::cos(target_angle)) * r;
+				const vec2	point		  = center + point_on_unit;
+				out_path.push_back(point);
+			}
 		}
-		// Bottom-right corner (center: max.x-r, max.y-r)
-		for (int i = 0; i <= segments; ++i)
+		// top right
 		{
-			float angle = (float)M_PI / 2.0f + (float)M_PI / 2.0f * ((float)i / segments); // PI/2 to PI
-			out_path.push_back({max.x - r + cos(angle) * r, max.y - r - sin(angle) * r});
+			const vec2 center = vec2(max.x - r, min.y + r);
+			for (int i = 0; i <= segments; ++i)
+			{
+
+				const float target_angle  = DEG_2_RAD * ((90.0f / segments) * i);
+				const vec2	point_on_unit = vec2(math::sin(target_angle), -math::cos(target_angle)) * r;
+				const vec2	point		  = center + point_on_unit;
+				out_path.push_back(point);
+			}
 		}
-		// Bottom-left corner (center: min.x+r, max.y-r)
-		for (int i = 0; i <= segments; ++i)
+
+		// bottom right
 		{
-			float angle = (float)M_PI + (float)M_PI / 2.0f * ((float)i / segments); // PI to 3PI/2
-			out_path.push_back({min.x + r + cos(angle) * r, max.y - r - sin(angle) * r});
+			const vec2 center = vec2(max.x - r, max.y - r);
+			for (int i = 0; i <= segments; ++i)
+			{
+
+				const float target_angle  = DEG_2_RAD * (90.0f + (90.0f / segments) * i);
+				const vec2	point_on_unit = vec2(math::sin(target_angle), -math::cos(target_angle)) * r;
+				const vec2	point		  = center + point_on_unit;
+				out_path.push_back(point);
+			}
 		}
-		// Top-left corner (center: min.x+r, min.y+r)
-		for (int i = 0; i <= segments; ++i)
+
+		// bottom left
 		{
-			float angle = (float)M_PI * 3.0f / 2.0f + (float)M_PI / 2.0f * ((float)i / segments); // 3PI/2 to 2PI
-			out_path.push_back({min.x + r + cos(angle) * r, min.y + r - sin(angle) * r});
+			const vec2 center = vec2(min.x + r, max.y - r);
+			for (int i = 0; i <= segments; ++i)
+			{
+
+				const float target_angle  = DEG_2_RAD * (180.0f + (90.0f / segments) * i);
+				const vec2	point_on_unit = vec2(math::sin(target_angle), -math::cos(target_angle)) * r;
+				const vec2	point		  = center + point_on_unit;
+				out_path.push_back(point);
+			}
 		}
 	}
 	void builder::generate_sharp_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max)

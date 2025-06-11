@@ -46,17 +46,17 @@ void gl_backend::init(vekt::builder& builder)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
-	// glEnable(GL_BLEND);
+	glEnable(GL_BLEND);
 	// glEnable(GL_DEPTH_TEST);
 	//  glDisable(GL_DEPTH_TEST);
-	// glEnable(GL_CULL_FACE);
 	// glDisable(GL_STENCIL_TEST);
 	// glEnable(GL_SCISSOR_TEST);
 	// glDepthMask(GL_FALSE);
 
+	glEnable(GL_CULL_FACE);
+	glFrontFace(GL_CW);
 	glBlendEquation(static_cast<GLenum>(true));
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	const char* BASIC_VERT = "#version 330 core\n"
 							 "layout (location = 0) in vec2 pos;\n"
@@ -95,9 +95,9 @@ void gl_backend::init(vekt::builder& builder)
 
 	builder.set_on_draw_basic(std::bind(&gl_backend::draw_basic, this, std::placeholders::_1));
 	builder.set_on_draw_text(std::bind(&gl_backend::draw_text, this, std::placeholders::_1));
-	vekt::font_manager::get().set_atlas_created_callback(std::bind(gl_backend::atlas_created, this, std::placeholders::_1));
-	vekt::font_manager::get().set_atlas_updated_callback(std::bind(gl_backend::atlas_updated, this, std::placeholders::_1));
-	vekt::font_manager::get().set_atlas_destroyed_callback(std::bind(gl_backend::atlas_destroyed, this, std::placeholders::_1));
+	vekt::font_manager::get().set_atlas_created_callback(std::bind(&gl_backend::atlas_created, this, std::placeholders::_1));
+	vekt::font_manager::get().set_atlas_updated_callback(std::bind(&gl_backend::atlas_updated, this, std::placeholders::_1));
+	vekt::font_manager::get().set_atlas_destroyed_callback(std::bind(&gl_backend::atlas_destroyed, this, std::placeholders::_1));
 }
 
 void gl_backend::uninit()
@@ -127,22 +127,23 @@ void gl_backend::start_frame()
 	}
 	_skipped_draw = false;
 
+	glPolygonMode(GL_FRONT_AND_BACK, _is_wireframe ? GL_LINE : GL_FILL);
+
 	float		L	 = static_cast<float>(0.0f);
 	float		R	 = static_cast<float>(0.0f + _width);
 	float		T	 = static_cast<float>(0.0f);
 	float		B	 = static_cast<float>(0.0f + _height);
-	const float zoom = 1.0f;
 
-	L *= zoom;
-	R *= zoom;
-	T *= zoom;
-	B *= zoom;
+	L *= _zoom;
+	R *= _zoom;
+	T *= _zoom;
+	B *= _zoom;
 
 	// debug offsets.
-	L += 0.0f;
-	R += 0.0f;
-	T += 0.0f;
-	B += 0.0f;
+	L += _debug_offsets[0];
+	R += _debug_offsets[0];
+	T += _debug_offsets[1];
+	B += _debug_offsets[1];
 
 	_proj[0][0] = 2.0f / (R - L);
 	_proj[0][1] = 0.0f;

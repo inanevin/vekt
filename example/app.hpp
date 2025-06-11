@@ -24,6 +24,9 @@ public:
 	inline static app* get() { return s_app; }
 
 private:
+	void create_some_widgets();
+
+private:
 	static app*	   s_app;
 	vekt::widget*  _vekt_root	 = nullptr;
 	vekt::builder* _vekt_builder = nullptr;

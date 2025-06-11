@@ -55,6 +55,8 @@ bool glfw_window::init(int width, int height)
 	// set user pointer for callbacks.
 	glfwSetWindowUserPointer(_window, this);
 
+	// glfwSetWindowPos(_window, 0, 0);
+
 	auto window_resize = [](GLFWwindow* w, int wi, int he) { app::get()->on_resize(wi, he); };
 
 	auto window_close = [](GLFWwindow* w) { app::get()->set_should_quit(true); };
