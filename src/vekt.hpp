@@ -1044,7 +1044,7 @@ namespace vekt
 		vec2			   get_text_size(const gfx_text& text);
 		basic_draw_buffer* get_draw_buffer_basic(unsigned int draw_order, void* user_data);
 		text_draw_buffer*  get_draw_buffer_text(unsigned int draw_order, void* user_data);
-		void			   push_to_clip_stack(const vec4& rect);
+		bool			   push_to_clip_stack(const vec4& rect);
 		void			   pop_clip_stack();
 		vec4			   calculate_intersection(const vec4& clip0, const vec4& clip1) const;
 
@@ -1072,7 +1072,8 @@ namespace vekt
 	private:
 		void	generate_rounded_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max, float rounding, int segments);
 		void	generate_sharp_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max);
-		void	generate_offset_path(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount);
+		void	generate_offset_rect(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount);
+		void	generate_offset_rounded_rect(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount);
 		void	add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size, bool add_ccw);
 		void	add_filled_rect(basic_draw_buffer* db, unsigned int start, unsigned int size);
 		void	add_filled_rect_central(basic_draw_buffer* db, unsigned int start, unsigned int central_start, unsigned int size);
@@ -1432,13 +1433,7 @@ namespace vekt
 
 	bool widget::draw_pass_clip_check(builder& builder)
 	{
-		if (_widget_gfx.type == gfx_type::rect && _widget_gfx.gfx.rect.clip_children)
-		{
-			const vec4 effective_clip = builder.calculate_intersection(builder.get_current_clip(), {_widget_data.final_pos.x, _widget_data.final_pos.y, _widget_data.final_size.x, _widget_data.final_size.y});
-			if (effective_clip.z <= 0 || effective_clip.w <= 0) return true;
-			builder.push_to_clip_stack(effective_clip);
-		}
-
+		if (_widget_gfx.type == gfx_type::rect && _widget_gfx.gfx.rect.clip_children) { return builder.push_to_clip_stack({_widget_data.final_pos.x, _widget_data.final_pos.y, _widget_data.final_size.x, _widget_data.final_size.y}); }
 		return false;
 	}
 
@@ -1457,8 +1452,8 @@ namespace vekt
 			{
 				w->draw_pass(builder);
 				w->draw_pass_children(builder);
-				w->draw_pass_clip_check_end(builder);
 			}
+			w->draw_pass_clip_check_end(builder);
 		}
 	}
 
@@ -1511,10 +1506,10 @@ namespace vekt
 		_root->pos_pass_children();
 		_root->pos_pass_post();
 
-		push_to_clip_stack({0.0f, 0.0f, screen_size.x, screen_size.y});
+		_clip_stack.push_back({0.0f, 0.0f, screen_size.x, screen_size.y});
 		_root->draw_pass(bd);
 		_root->draw_pass_children(bd);
-		pop_clip_stack();
+		_clip_stack.remove(_clip_stack.size() - 1);
 	}
 
 	void builder::flush()
@@ -1717,15 +1712,21 @@ namespace vekt
 		else
 			generate_sharp_rect(outer_path, min, max);
 
-		if (has_stroke) generate_offset_path(inner_path, outer_path, static_cast<float>(rect.thickness));
+		if (has_stroke)
+		{
+			if (has_rounding)
+				generate_rounded_rect(outer_path, min + vec2(rect.thickness, rect.thickness), max - vec2(rect.thickness, rect.thickness), rect.rounding, rect.segments);
+			else
+				generate_offset_rect(inner_path, outer_path, static_cast<float>(rect.thickness));
+		}
 
 		pod_vector<vec2> aa_outermost_path;
 		pod_vector<vec2> aa_innermost_path;
 
 		if (has_aa)
 		{
-			generate_offset_path(aa_outermost_path, outer_path, -static_cast<float>(rect.aa_thickness));
-			if (has_stroke && !inner_path.empty()) { generate_offset_path(aa_innermost_path, inner_path, static_cast<float>(rect.aa_thickness)); }
+			generate_offset_rect(aa_outermost_path, outer_path, -static_cast<float>(rect.aa_thickness));
+			if (has_stroke && !inner_path.empty()) { generate_offset_rect(aa_innermost_path, inner_path, static_cast<float>(rect.aa_thickness)); }
 		}
 
 		if (has_stroke)
@@ -1754,9 +1755,15 @@ namespace vekt
 		{
 			const unsigned int out_start = db->vertices.size();
 			add_vertices(db, outer_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
-			const unsigned int central_start = db->vertices.size();
-			add_central_vertex(db, rect.color_start, rect.color_end, min, max);
-			add_filled_rect_central(db, out_start, central_start, outer_path.size());
+
+			if (has_rounding)
+			{
+				const unsigned int central_start = db->vertices.size();
+				add_central_vertex(db, rect.color_start, rect.color_end, min, max);
+				add_filled_rect_central(db, out_start, central_start, outer_path.size());
+			}
+			else
+				add_filled_rect(db, out_start, outer_path.size());
 
 			if (has_aa)
 			{
@@ -1928,7 +1935,7 @@ namespace vekt
 		{
 			db->indices.push_back(central_start);
 			db->indices.push_back(start + i);
-			db->indices.push_back((start + i + 1) % size);
+			db->indices.push_back(start + ((i + 1) % (size)));
 		}
 	}
 
@@ -1970,7 +1977,7 @@ namespace vekt
 		}
 	}
 
-	void builder::generate_offset_path(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float distance)
+	void builder::generate_offset_rect(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float distance)
 	{
 		if (base_path.size() < 2) return;
 		out_path.clear();
@@ -1996,6 +2003,8 @@ namespace vekt
 			out_path[i]		= path;
 		}
 	}
+
+	void builder::generate_offset_rounded_rect(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount) {}
 
 	void builder::add_vertices(basic_draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max)
 	{
@@ -2140,10 +2149,12 @@ namespace vekt
 		return db;
 	}
 
-	void builder::push_to_clip_stack(const vec4& rect)
+	bool builder::push_to_clip_stack(const vec4& rect)
 	{
-		vec4 parent_clip = _clip_stack.empty() ? vec4() : _clip_stack[_clip_stack.size() - 1];
-		_clip_stack.push_back(calculate_intersection(parent_clip, rect));
+		vec4	   parent_clip	  = _clip_stack.empty() ? vec4() : _clip_stack[_clip_stack.size() - 1];
+		const vec4 effective_clip = calculate_intersection(parent_clip, rect);
+		_clip_stack.push_back(effective_clip);
+		return effective_clip.z <= 0 || effective_clip.w <= 0;
 	}
 
 	void builder::pop_clip_stack()

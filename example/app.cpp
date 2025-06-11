@@ -144,17 +144,60 @@ void app::on_mouse_cursor(float x, float y)
 void app::create_some_widgets()
 {
 	vekt::widget* some_bg = _vekt_builder->allocate();
-	some_bg->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-	some_bg->set_pos_y(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-	some_bg->set_width(0.5f, vekt::helper_size_type::relative);
-	some_bg->set_height(0.5f, vekt::helper_size_type::relative);
-	some_bg->get_data_gfx().type = vekt::gfx_type::rect;
-	vekt::gfx_rect& rect		 = some_bg->get_data_gfx().gfx.rect;
-	rect.color_start			 = vekt::vec4(0.0f, 0.2f, 0.2f, 1.0f);
-	rect.color_end				 = vekt::vec4(0.2f, 0.6f, 0.6f, 1.0f);
-	rect.rounding = 36.0f;
-//	rect.thickness				 = 24;
-//rect.aa_thickness			 = 2;
+	{
+		some_bg->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+		some_bg->set_pos_y(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+		some_bg->set_width(0.5f, vekt::helper_size_type::relative);
+		some_bg->set_height(0.5f, vekt::helper_size_type::relative);
+		some_bg->get_data_gfx().type = vekt::gfx_type::rect;
+
+		vekt::gfx_rect& rect = some_bg->get_data_gfx().gfx.rect;
+		rect.color_start	 = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+		rect.color_end		 = vekt::vec4(0.2f, 0.7f, 0.2f, 1.0f);
+		 rect.clip_children	 = true;
+		// rect.rounding		 = 36.0f;
+		//	rect.thickness				 = 24;
+		// rect.aa_thickness = 2;
+	}
+
+	vekt::widget* child = _vekt_builder->allocate();
+	{
+		child->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+		child->set_pos_y(0.1f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+		child->set_width(0.5f, vekt::helper_size_type::relative);
+		child->set_height(0.5f, vekt::helper_size_type::relative);
+		child->get_data_gfx().type = vekt::gfx_type::rect;
+
+		vekt::gfx_rect& rect = child->get_data_gfx().gfx.rect;
+		rect.color_start	 = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+		rect.color_end		 = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+		rect.rounding		 = 12.0f;
+		//rect.clip_children = true;
+		// rect.segments		 = 1;
+		// rect.thickness				 = 24;
+		// rect.aa_thickness			 = 2;
+
+		some_bg->add_child(child);
+	}
+
+	vekt::widget* child2 = _vekt_builder->allocate();
+	{
+		child2->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+		child2->set_pos_y(0.7f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+		child2->set_width(0.5f, vekt::helper_size_type::relative);
+		child2->set_height(1.6f, vekt::helper_size_type::relative);
+		child2->get_data_gfx().type = vekt::gfx_type::rect;
+
+		vekt::gfx_rect& rect = child2->get_data_gfx().gfx.rect;
+		rect.color_start	 = vekt::vec4(0.4f, 0.2f, 0.2f, 1.0f);
+		rect.color_end		 = vekt::vec4(0.4f, 0.2f, 0.2f, 1.0f);
+		rect.rounding		 = 12.0f;
+		// rect.segments		 = 1;
+		// rect.thickness				 = 24;
+		// rect.aa_thickness			 = 2;
+
+		child->add_child(child2);
+	}
 
 	_vekt_root->add_child(some_bg);
 }

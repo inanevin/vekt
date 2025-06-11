@@ -50,7 +50,7 @@ void gl_backend::init(vekt::builder& builder)
 	// glEnable(GL_DEPTH_TEST);
 	//  glDisable(GL_DEPTH_TEST);
 	// glDisable(GL_STENCIL_TEST);
-	// glEnable(GL_SCISSOR_TEST);
+	 glEnable(GL_SCISSOR_TEST);
 	// glDepthMask(GL_FALSE);
 
 	glEnable(GL_CULL_FACE);
@@ -129,10 +129,10 @@ void gl_backend::start_frame()
 
 	glPolygonMode(GL_FRONT_AND_BACK, _is_wireframe ? GL_LINE : GL_FILL);
 
-	float		L	 = static_cast<float>(0.0f);
-	float		R	 = static_cast<float>(0.0f + _width);
-	float		T	 = static_cast<float>(0.0f);
-	float		B	 = static_cast<float>(0.0f + _height);
+	float L = static_cast<float>(0.0f);
+	float R = static_cast<float>(0.0f + _width);
+	float T = static_cast<float>(0.0f);
+	float B = static_cast<float>(0.0f + _height);
 
 	L *= _zoom;
 	R *= _zoom;
@@ -247,7 +247,11 @@ void gl_backend::create_shader(shader_data& data, const char* vert, const char* 
 	}
 }
 
-void gl_backend::set_scissors(float x, float y, float w, float h) { glScissor(x, static_cast<GLint>(_height - (y + h)), static_cast<GLint>(w), static_cast<GLint>(h)); }
+void gl_backend::set_scissors(float x, float y, float w, float h)
+{
+	int a = 5;
+	glScissor(x, static_cast<GLint>(_height - (y + h)), static_cast<GLint>(w), static_cast<GLint>(h));
+}
 
 void gl_backend::create_font_texture(unsigned int width, unsigned int height) {}
 
