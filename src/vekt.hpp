@@ -11,6 +11,14 @@
 #include <functional>
 #include <utility> // For std::swap, std::move
 
+#ifndef VEKT_STRING
+#include <string>
+#endif
+
+#ifndef VEKT_VARIANT
+#include <variant>
+#endif
+
 #define VEKT_INLINE inline
 #define VEKT_API	extern
 
@@ -42,6 +50,14 @@ namespace vekt
 #define MEMCPY(...)	 memcpy(__VA_ARGS__)
 #define FREE(X)		 free(X)
 #define ASSERT(...)	 assert(__VA_ARGS__)
+
+#ifndef VEKT_STRING
+#define VEKT_STRING std::string
+#endif
+
+#ifndef VEKT_VARIANT
+#define VEKT_VARIANT std::variant
+#endif
 
 	////////////////////////////////////////////////////////////////////////////////
 	// :: LOGS & CONFIGS
@@ -575,9 +591,9 @@ namespace vekt
 		wf_size_x_fill			 = 1 << 14,
 		wf_size_y_fill			 = 1 << 15,
 		wf_visible				 = 1 << 16,
-		wf_pos_anchor_x_mid		 = 1 << 17,
+		wf_pos_anchor_x_center	 = 1 << 17,
 		wf_pos_anchor_x_end		 = 1 << 18,
-		wf_pos_anchor_y_mid		 = 1 << 19,
+		wf_pos_anchor_y_center	 = 1 << 19,
 		wf_pos_anchor_y_end		 = 1 << 20,
 	};
 
@@ -651,7 +667,7 @@ namespace vekt
 	struct font;
 	struct gfx_text
 	{
-		const char*	 text			 = nullptr;
+		VEKT_STRING	 text			 = "";
 		font*		 target_font	 = nullptr;
 		unsigned int spacing		 = 0;
 		vec4		 color_start	 = {};
@@ -661,10 +677,8 @@ namespace vekt
 
 	struct widget_gfx
 	{
-		union gfx {
-			gfx_text text;
-			gfx_rect rect;
-		} gfx;
+
+		VEKT_VARIANT<gfx_text, gfx_rect> gfx;
 
 		void*		 user_data	= nullptr;
 		gfx_type	 type		= gfx_type::none;
@@ -720,7 +734,7 @@ namespace vekt
 		inline void set_pos_x(float x, helper_pos_type type, helper_anchor_type anchor = helper_anchor_type::start)
 		{
 			_widget_data.pos.x = x;
-			_widget_data.flags &= ~(widget_flags::wf_pos_x_relative | widget_flags::wf_pos_x_absolute | widget_flags::wf_pos_anchor_x_mid | widget_flags::wf_pos_anchor_x_end);
+			_widget_data.flags &= ~(widget_flags::wf_pos_x_relative | widget_flags::wf_pos_x_absolute | widget_flags::wf_pos_anchor_x_center | widget_flags::wf_pos_anchor_x_end);
 
 			switch (type)
 			{
@@ -737,7 +751,7 @@ namespace vekt
 			switch (anchor)
 			{
 			case helper_anchor_type::center:
-				_widget_data.flags |= widget_flags::wf_pos_anchor_x_mid;
+				_widget_data.flags |= widget_flags::wf_pos_anchor_x_center;
 				break;
 			case helper_anchor_type::end:
 				_widget_data.flags |= widget_flags::wf_pos_anchor_x_end;
@@ -750,7 +764,7 @@ namespace vekt
 		inline void set_pos_y(float y, helper_pos_type type, helper_anchor_type anchor = helper_anchor_type::start)
 		{
 			_widget_data.pos.y = y;
-			_widget_data.flags &= ~(widget_flags::wf_pos_y_relative | widget_flags::wf_pos_y_absolute | widget_flags::wf_pos_anchor_y_mid | widget_flags::wf_pos_anchor_y_end);
+			_widget_data.flags &= ~(widget_flags::wf_pos_y_relative | widget_flags::wf_pos_y_absolute | widget_flags::wf_pos_anchor_y_center | widget_flags::wf_pos_anchor_y_end);
 
 			switch (type)
 			{
@@ -767,7 +781,7 @@ namespace vekt
 			switch (anchor)
 			{
 			case helper_anchor_type::center:
-				_widget_data.flags |= widget_flags::wf_pos_anchor_y_mid;
+				_widget_data.flags |= widget_flags::wf_pos_anchor_y_center;
 				break;
 			case helper_anchor_type::end:
 				_widget_data.flags |= widget_flags::wf_pos_anchor_y_end;
@@ -840,7 +854,27 @@ namespace vekt
 		inline void			set_draw_order(bool draw_order) { _widget_gfx.draw_order = draw_order; }
 		inline bool			get_is_visible() const { return _widget_data.flags & widget_flags::wf_visible; }
 		inline widget_data& get_data_widget() { return _widget_data; }
-		inline widget_gfx&	get_data_gfx() { return _widget_gfx; }
+		inline widget_gfx&	get_gfx_data() { return _widget_gfx; }
+		inline gfx_text&	get_gfx_text() { return set_gfx_type_text(); }
+		inline gfx_rect&	get_gfx_rect() { return set_gfx_type_rect(); }
+
+		inline void set_gfx_type_none() { _widget_gfx.type = gfx_type::none; }
+
+		inline gfx_text& set_gfx_type_text()
+		{
+			if (_widget_gfx.type == gfx_type::text) return std::get<gfx_text>(_widget_gfx.gfx);
+			_widget_gfx.gfx	 = gfx_text();
+			_widget_gfx.type = gfx_type::text;
+			return std::get<gfx_text>(_widget_gfx.gfx);
+		}
+
+		inline gfx_rect& set_gfx_type_rect()
+		{
+			if (_widget_gfx.type == gfx_type::rect) return std::get<gfx_rect>(_widget_gfx.gfx);
+			_widget_gfx.gfx	 = gfx_rect();
+			_widget_gfx.type = gfx_type::rect;
+			return std::get<gfx_rect>(_widget_gfx.gfx);
+		}
 
 		inline bool is_point_in_bounds(unsigned int x, unsigned int y)
 		{
@@ -1041,7 +1075,7 @@ namespace vekt
 		void			   remove_input_layer(unsigned int priority);
 		void			   add_rect(const gfx_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data);
 		void			   add_text(const gfx_text& text, const vec2& position, unsigned int draw_order, void* user_data);
-		vec2			   get_text_size(const gfx_text& text);
+		static vec2		   get_text_size(const gfx_text& text);
 		basic_draw_buffer* get_draw_buffer_basic(unsigned int draw_order, void* user_data);
 		text_draw_buffer*  get_draw_buffer_text(unsigned int draw_order, void* user_data);
 		bool			   push_to_clip_stack(const vec4& rect);
@@ -1110,10 +1144,10 @@ namespace vekt
 		float y_offset	   = 0.0f;
 		int	  atlas_x	   = 0;
 		int	  atlas_y	   = 0;
-		float u0		   = 0.0f;
-		float v0		   = 0.0f;
-		float u1		   = 0.0f;
-		float v1		   = 0.0f;
+		float uv_x		   = 0.0f;
+		float uv_y		   = 0.0f;
+		float uv_w		   = 0.0f;
+		float uv_h		   = 0.0f;
 	};
 
 	struct font
@@ -1193,7 +1227,7 @@ namespace vekt
 		}
 
 		inline void set_atlas_created_callback(atlas_cb cb) { _atlas_created_cb = cb; }
-		inline void set_atlas_updated_callback(atlas_cb cb) { _atlas_destroyed_cb = cb; }
+		inline void set_atlas_updated_callback(atlas_cb cb) { _atlas_updated_cb = cb; }
 		inline void set_atlas_destroyed_callback(atlas_cb cb) { _atlas_destroyed_cb = cb; }
 
 	private:
@@ -1261,7 +1295,7 @@ namespace vekt
 
 			if (_widget_data.flags & widget_flags::wf_pos_anchor_x_end)
 				_widget_data.final_pos.x = (_widget_data.parent->_widget_data.final_pos.x + _widget_data.parent->_widget_data.margins.left) + (parent_width * _widget_data.pos.x) - _widget_data.final_size.x;
-			else if (_widget_data.flags & widget_flags::wf_pos_anchor_x_mid)
+			else if (_widget_data.flags & widget_flags::wf_pos_anchor_x_center)
 				_widget_data.final_pos.x = (_widget_data.parent->_widget_data.final_pos.x + _widget_data.parent->_widget_data.margins.left) + (parent_width * _widget_data.pos.x) - _widget_data.final_size.x * 0.5f;
 			else
 				_widget_data.final_pos.x = (_widget_data.parent->_widget_data.final_pos.x + _widget_data.parent->_widget_data.margins.left) + (parent_width * _widget_data.pos.x);
@@ -1273,9 +1307,9 @@ namespace vekt
 		{
 			const float parent_height = _widget_data.parent->_widget_data.final_size.y - _widget_data.parent->_widget_data.margins.top - _widget_data.parent->_widget_data.margins.bottom;
 
-			if (_widget_data.flags & widget_flags::wf_pos_anchor_x_end)
+			if (_widget_data.flags & widget_flags::wf_pos_anchor_y_end)
 				_widget_data.final_pos.y = (_widget_data.parent->_widget_data.final_pos.y + _widget_data.parent->_widget_data.margins.top) + (parent_height * _widget_data.pos.y) - _widget_data.final_size.y;
-			else if (_widget_data.flags & widget_flags::wf_pos_anchor_x_mid)
+			else if (_widget_data.flags & widget_flags::wf_pos_anchor_y_center)
 				_widget_data.final_pos.y = (_widget_data.parent->_widget_data.final_pos.y + _widget_data.parent->_widget_data.margins.top) + (parent_height * _widget_data.pos.y) - _widget_data.final_size.y * 0.5f;
 			else
 				_widget_data.final_pos.y = (_widget_data.parent->_widget_data.final_pos.y + _widget_data.parent->_widget_data.margins.top) + (parent_height * _widget_data.pos.y);
@@ -1332,6 +1366,8 @@ namespace vekt
 			_widget_data.final_size.y = (_widget_data.parent->_widget_data.final_size.y - _widget_data.parent->_widget_data.margins.top - _widget_data.parent->_widget_data.margins.bottom) * _widget_data.size.y;
 
 		size_copy_check();
+
+		if (_widget_gfx.type == gfx_type::text) { _widget_data.final_size = builder::get_text_size(get_gfx_text()); }
 
 		if (_widget_data.custom_size_pass) _widget_data.custom_size_pass(this);
 	}
@@ -1433,7 +1469,7 @@ namespace vekt
 
 	bool widget::draw_pass_clip_check(builder& builder)
 	{
-		if (_widget_gfx.type == gfx_type::rect && _widget_gfx.gfx.rect.clip_children) { return builder.push_to_clip_stack({_widget_data.final_pos.x, _widget_data.final_pos.y, _widget_data.final_size.x, _widget_data.final_size.y}); }
+		if (_widget_gfx.type == gfx_type::rect && get_gfx_rect().clip_children) { return builder.push_to_clip_stack({_widget_data.final_pos.x, _widget_data.final_pos.y, _widget_data.final_size.x, _widget_data.final_size.y}); }
 		return false;
 	}
 
@@ -1459,7 +1495,7 @@ namespace vekt
 
 	void widget::draw_pass_clip_check_end(builder& builder)
 	{
-		if (_widget_gfx.type == gfx_type::rect && _widget_gfx.gfx.rect.clip_children) builder.pop_clip_stack();
+		if (_widget_gfx.type == gfx_type::rect && get_gfx_rect().clip_children) builder.pop_clip_stack();
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -1776,27 +1812,30 @@ namespace vekt
 
 	void builder::add_text(const gfx_text& text, const vec2& position, unsigned int draw_order, void* user_data)
 	{
+		if (text.target_font == nullptr)
+		{
+			V_ERR("vekt::builder::add_text() -> No font is set!");
+			return;
+		}
 		text_draw_buffer* db		  = get_draw_buffer_text(draw_order, user_data);
 		const float		  pixel_scale = text.target_font->_scale;
 
-		float pen_x = position.x;
-		float pen_y = position.y;
-
 		const vec2 size = get_text_size(text);
-		const vec2 max	= position + vec2(size.x, -size.y);
 
 		const unsigned int start_vertices_idx = db->vertices.size();
 		const unsigned int start_indices_idx  = db->indices.size();
-		const unsigned int char_count		  = static_cast<unsigned int>(strlen(reinterpret_cast<const char*>(text.text)));
+		const unsigned int char_count		  = static_cast<unsigned int>(text.text.size());
 		db->vertices.resize(start_vertices_idx + char_count * 4);
 		db->indices.resize(start_indices_idx + char_count * 6);
 
 		unsigned int vtx_counter = 0;
 		unsigned int idx_counter = 0;
 
+		vec2 pen = position;
+
 		auto draw_char = [&](const glyph& g, unsigned long c) {
-			const float quad_left	= pen_x + g.x_offset;
-			const float quad_top	= pen_y - g.y_offset;
+			const float quad_left	= pen.x + g.x_offset;
+			const float quad_top	= pen.y + g.y_offset;
 			const float quad_right	= quad_left + g.width;
 			const float quad_bottom = quad_top + g.height;
 
@@ -1816,19 +1855,17 @@ namespace vekt
 				.pos = {quad_left, quad_bottom},
 			};
 
-#if defined VEKT_VERTEX_TEXT_PC || defined VEKT_VERTEX_TEXT_PCU
+#if defined VEKT_VERTEX_TEXT_PCU
 			v0.color = text.color_start;
 			v1.color = text.color_direction == direction::horizontal ? text.color_end : text.color_start;
 			v2.color = text.color_end;
 			v3.color = text.color_direction == direction::horizontal ? text.color_start : text.color_end;
 #endif
 
-#if defined VEKT_VERTEX_TEXT_PU || defined VEKT_VERTEX_TEXT_PCU
-			v0.uv = vec2(g.u0, g.v0);
-			v1.uv = vec2(g.u1, g.v0);
-			v2.uv = vec2(g.u1, g.v1);
-			v2.uv = vec2(g.u0, g.v1);
-#endif
+			v0.uv = vec2(g.uv_x, g.uv_y);
+			v1.uv = v0.uv + vec2(g.uv_w, 0.0f);
+			v2.uv = v1.uv + vec2(0.0f, g.uv_h);
+			v3.uv = v0.uv + vec2(0.0f, g.uv_h);
 
 			db->vertices[start_vertices_idx + vtx_counter]	   = v0;
 			db->vertices[start_vertices_idx + vtx_counter + 1] = v1;
@@ -1846,11 +1883,21 @@ namespace vekt
 			vtx_counter += 4;
 			idx_counter += 6;
 
-			pen_x += g.advance_x * pixel_scale;
+			pen.x += g.advance_x * pixel_scale;
 		};
 
 		const uint8_t* c;
-		for (c = (uint8_t*)text.text; *c; c++)
+		float		   max_y_offset = 0;
+		for (c = (uint8_t*)text.text.c_str(); *c; c++)
+		{
+			auto character = *c;
+			auto ch		   = text.target_font->glyph_info[character];
+			max_y_offset   = math::max(max_y_offset, -ch.y_offset);
+		}
+
+		pen.y += max_y_offset;
+
+		for (c = (uint8_t*)text.text.c_str(); *c; c++)
 		{
 			auto character = *c;
 			auto ch		   = text.target_font->glyph_info[character];
@@ -1860,6 +1907,12 @@ namespace vekt
 
 	vec2 builder::get_text_size(const gfx_text& text)
 	{
+		if (text.target_font == nullptr)
+		{
+			V_ERR("vekt::builder::get_text_size() -> No font is set!");
+			return vec2();
+		}
+
 		const float pixel_scale = text.target_font->_scale;
 
 		float total_x = 0.0f;
@@ -1871,7 +1924,7 @@ namespace vekt
 		};
 
 		const uint8_t* c;
-		for (c = (uint8_t*)text.text; *c; c++)
+		for (c = (uint8_t*)text.text.c_str(); *c; c++)
 		{
 			auto character = *c;
 			auto ch		   = text.target_font->glyph_info[character];
@@ -2182,7 +2235,9 @@ namespace vekt
 		_width	= width;
 		_height = height;
 		_available_slices.push_back(new atlas::slice(0, _height));
-		_data	   = reinterpret_cast<unsigned char*>(MALLOC(static_cast<size_t>(width * height)));
+		const size_t sz = static_cast<size_t>(width * height);
+		_data			= reinterpret_cast<unsigned char*>(MALLOC(sz));
+		memset(_data, 0, sz);
 		_data_size = width * height;
 	}
 
@@ -2281,8 +2336,9 @@ namespace vekt
 		stbtt_GetFontVMetrics(&stb_font, &fnt->ascent, &fnt->descent, &fnt->line_gap);
 		fnt->size = size;
 
-		int total_width = 0;
-		int max_height	= 0;
+		int		  total_width = 0;
+		int		  max_height  = 0;
+		const int x_padding	  = 2;
 
 		for (int i = 0; i < 128; i++)
 		{
@@ -2296,7 +2352,7 @@ namespace vekt
 			glyph_info.x_offset = static_cast<float>(ix0);
 			glyph_info.y_offset = static_cast<float>(iy0);
 
-			if (glyph_info.width > 1) total_width += glyph_info.width + 1;
+			if (glyph_info.width >= 1) total_width += glyph_info.width + x_padding;
 			max_height = static_cast<int>(math::max(max_height, glyph_info.height));
 
 			stbtt_GetCodepointHMetrics(&stb_font, i, &glyph_info.advance_x, &glyph_info.left_bearing);
@@ -2340,10 +2396,10 @@ namespace vekt
 
 			glyph_info.atlas_x = current_atlas_pen_x;
 			glyph_info.atlas_y = fnt->_atlas_pos + current_atlas_pen_y;
-			glyph_info.u0	   = static_cast<float>(glyph_info.atlas_x) / static_cast<float>(fnt->_atlas->get_width());
-			glyph_info.v0	   = static_cast<float>(glyph_info.atlas_y) / static_cast<float>(fnt->_atlas->get_height());
-			glyph_info.u1	   = static_cast<float>(glyph_info.width) / static_cast<float>(fnt->_atlas->get_width());
-			glyph_info.v1	   = static_cast<float>(glyph_info.height) / static_cast<float>(fnt->_atlas->get_height());
+			glyph_info.uv_x	   = static_cast<float>(glyph_info.atlas_x) / static_cast<float>(fnt->_atlas->get_width());
+			glyph_info.uv_y	   = static_cast<float>(glyph_info.atlas_y) / static_cast<float>(fnt->_atlas->get_height());
+			glyph_info.uv_w	   = static_cast<float>(glyph_info.width) / static_cast<float>(fnt->_atlas->get_width());
+			glyph_info.uv_h	   = static_cast<float>(glyph_info.height) / static_cast<float>(fnt->_atlas->get_height());
 
 			unsigned char* dest_pixel_ptr = fnt->_atlas->get_data() + (glyph_info.atlas_y * fnt->_atlas->get_width()) + glyph_info.atlas_x;
 
@@ -2356,7 +2412,7 @@ namespace vekt
 									  fnt->_scale,				// Vertical scale
 									  i);						// Codepoint
 
-			current_atlas_pen_x += glyph_info.width + 1;
+			current_atlas_pen_x += glyph_info.width + x_padding;
 		}
 
 		if (_atlas_updated_cb) _atlas_updated_cb(fnt->_atlas);

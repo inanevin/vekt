@@ -97,6 +97,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC glad)
 set_property(TARGET glad PROPERTY FOLDER Dependencies)
 set_property(TARGET glfw PROPERTY FOLDER Dependencies)
 
+add_custom_command(
+TARGET ${PROJECT_NAME}
+POST_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/resources/" "${CMAKE_BINARY_DIR}/bin/$<CONFIGURATION>/")
 
 #--------------------------------------------------------------------
 # Folder structuring in visual studio

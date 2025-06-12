@@ -6,6 +6,7 @@ namespace vekt
 {
 	class builder;
 	class widget;
+	struct font;
 }
 class app
 {
@@ -30,6 +31,7 @@ private:
 	static app*	   s_app;
 	vekt::widget*  _vekt_root	 = nullptr;
 	vekt::builder* _vekt_builder = nullptr;
+	vekt::font*	   _vekt_font	 = nullptr;
 	glfw_window	   _window;
 	gl_backend	   _backend;
 	bool		   _should_quit	  = false;

@@ -46,18 +46,21 @@ void gl_backend::init(vekt::builder& builder)
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
-	glEnable(GL_BLEND);
 	// glEnable(GL_DEPTH_TEST);
 	//  glDisable(GL_DEPTH_TEST);
 	// glDisable(GL_STENCIL_TEST);
-	 glEnable(GL_SCISSOR_TEST);
+	glEnable(GL_SCISSOR_TEST);
 	// glDepthMask(GL_FALSE);
 
 	glEnable(GL_CULL_FACE);
 	glFrontFace(GL_CW);
-	glBlendEquation(static_cast<GLenum>(true));
-	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	// glBlendEquation(static_cast<GLenum>(true));
+	// glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// You might also need:
+	glBlendEquation(GL_FUNC_ADD);
 	const char* BASIC_VERT = "#version 330 core\n"
 							 "layout (location = 0) in vec2 pos;\n"
 							 "layout (location = 1) in vec2 uv;\n"
@@ -305,9 +308,7 @@ void gl_backend::atlas_created(vekt::atlas* atlas)
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlas->get_width(), atlas->get_height(), 0, GL_RED, GL_UNSIGNED_BYTE, 0);
-
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
+	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
