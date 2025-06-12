@@ -499,6 +499,8 @@ namespace vekt
 		bool equals(const vec4& other) const { return math::equals(x, other.x, 0.1f) && math::equals(y, other.y, 0.1f) && math::equals(z, other.z, 0.1f) && math::equals(w, other.w, 0.1f); }
 		bool is_point_inside(const vec2& point) const { return point.x >= x && point.y <= x + z && point.y >= y && point.y <= y + w; }
 
+		static inline vec4 lerp(const vec4& a, const vec4& b, float t) { return vec4(math::lerp(a.x, b.x, t), math::lerp(a.y, b.y, t), math::lerp(a.z, b.z, t), math::lerp(a.w, b.w, t)); }
+
 		vec4 operator+(const vec4& other) const
 		{
 			vec4 v = {};
@@ -1832,7 +1834,8 @@ namespace vekt
 		unsigned int vtx_counter = 0;
 		unsigned int idx_counter = 0;
 
-		vec2 pen = position;
+		vec2	   pen = position;
+		const vec2 end = pen + size;
 
 		auto draw_char = [&](const glyph& g, unsigned long c, unsigned long previous_char) {
 			if (previous_char != 0)
@@ -1863,10 +1866,17 @@ namespace vekt
 			};
 
 #if defined VEKT_VERTEX_TEXT_PCU
-			v0.color = text.color_start;
-			v1.color = text.color_direction == direction::horizontal ? text.color_end : text.color_start;
-			v2.color = text.color_end;
-			v3.color = text.color_direction == direction::horizontal ? text.color_start : text.color_end;
+			auto set_col = [&](vertex_text& vtx) {
+				const float x0 = math::remap(vtx.pos.x, position.x, end.x, 0.0f, 1.0f);
+				const float y0 = math::remap(vtx.pos.y, position.y, end.y, 0.0f, 1.0f);
+				vtx.color	   = text.color_direction == direction::horizontal ? vec4::lerp(text.color_start, text.color_end, x0) : vec4::lerp(text.color_start, text.color_end, y0);
+			};
+
+			set_col(v0);
+			set_col(v1);
+			set_col(v2);
+			set_col(v3);
+
 #endif
 
 			v0.uv = vec2(g.uv_x, g.uv_y);
@@ -2204,7 +2214,7 @@ namespace vekt
 
 		_text_draw_buffers.push_back({});
 
-		text_draw_buffer* db = &_text_draw_buffers[_basic_draw_buffers.size() - 1];
+		text_draw_buffer* db = &_text_draw_buffers[_text_draw_buffers.size() - 1];
 		db->draw_order		 = draw_order;
 		db->user_data		 = user_data;
 		db->clip			 = clip;

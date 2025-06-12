@@ -174,8 +174,8 @@ void app::create_some_widgets()
 		vekt::gfx_rect& rect = some_bg->set_gfx_type_rect();
 		rect.color_start	 = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
 		rect.color_end		 = vekt::vec4(0.2f, 0.7f, 0.2f, 1.0f);
-		// rect.clip_children	 = true;
-		rect.rounding = 36.0f;
+		rect.clip_children	 = true;
+		rect.rounding		 = 36.0f;
 		//	rect.thickness				 = 24;
 		// rect.aa_thickness = 2;
 	}
@@ -190,7 +190,7 @@ void app::create_some_widgets()
 		rect.color_start	 = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
 		rect.color_end		 = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
 		// rect.rounding		 = 12.0f;
-		//  rect.clip_children = true;
+		rect.clip_children = true;
 		//   rect.segments		 = 1;
 		//   rect.thickness				 = 24;
 		//   rect.aa_thickness			 = 2;
@@ -201,7 +201,7 @@ void app::create_some_widgets()
 	vekt::widget* child2 = _vekt_builder->allocate();
 	{
 		child2->set_pos_x(0.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::start);
-		child2->set_pos_y(0.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::start);
+		child2->set_pos_y(1.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::end);
 		child2->set_width(0.5f, vekt::helper_size_type::relative);
 		child2->set_height(1.6f, vekt::helper_size_type::relative);
 		child2->get_gfx_data().type = vekt::gfx_type::text;
@@ -210,7 +210,8 @@ void app::create_some_widgets()
 		text.text			 = "DdYYdYDY selAgmY beyBi";
 		text.target_font	 = _vekt_font;
 		text.color_start	 = vekt::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		text.color_end		 = vekt::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+		text.color_end		 = vekt::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+		text.color_direction = vekt::direction::vertical;
 
 		child->add_child(child2);
 	}
