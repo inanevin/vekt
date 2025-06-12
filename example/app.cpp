@@ -7,6 +7,8 @@
 #include "gl_backend.hpp"
 #include <iostream>
 #include <glfw/glfw3.h>
+#include <cstdarg> // For va_list, va_start, va_end, va_arg
+#include <cstdio>  // For vsnprintf
 
 // VEKT_VERTEX_BASIC_P
 // VEKT_VERTEX_BASIC_PC
@@ -21,7 +23,23 @@ app* app::s_app = nullptr;
 
 void app::init()
 {
-	vekt::config.on_log = [](vekt::log_verbosity verb, const char* err...) { std::cerr << err << std::endl; };
+	vekt::config.on_log = [](vekt::log_verbosity verb, const char* log...) {
+		char buffer[1024];
+
+		va_list args;
+
+		va_start(args, log);
+
+		int written_chars = vsnprintf(buffer, sizeof(buffer), log, args);
+
+		va_end(args);
+
+		// Handle potential truncation (optional but good practice)
+		if (written_chars >= sizeof(buffer) || written_chars < 0) { std::cerr << "Log message truncated or error: "; }
+
+		// Output the formatted string to std::cerr
+		std::cerr << buffer << std::endl;
+	};
 	vekt::font_manager::get().init();
 
 	s_app		  = this;
@@ -189,7 +207,7 @@ void app::create_some_widgets()
 		child2->get_gfx_data().type = vekt::gfx_type::text;
 
 		vekt::gfx_text& text = child2->get_gfx_text();
-		text.text			 = "YEAH BODDY";
+		text.text			 = "DdYYdYDY selAgmY beyBi";
 		text.target_font	 = _vekt_font;
 		text.color_start	 = vekt::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		text.color_end		 = vekt::vec4(1.0f, 1.0f, 1.0f, 1.0f);

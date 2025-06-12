@@ -1136,18 +1136,19 @@ namespace vekt
 
 	struct glyph
 	{
-		int	  width		   = 0;
-		int	  height	   = 0;
-		int	  advance_x	   = 0;
-		int	  left_bearing = 0;
-		float x_offset	   = 0.0f;
-		float y_offset	   = 0.0f;
-		int	  atlas_x	   = 0;
-		int	  atlas_y	   = 0;
-		float uv_x		   = 0.0f;
-		float uv_y		   = 0.0f;
-		float uv_w		   = 0.0f;
-		float uv_h		   = 0.0f;
+		int	  kern_advance[128] = {0};
+		int	  width				= 0;
+		int	  height			= 0;
+		int	  advance_x			= 0;
+		int	  left_bearing		= 0;
+		float x_offset			= 0.0f;
+		float y_offset			= 0.0f;
+		int	  atlas_x			= 0;
+		int	  atlas_y			= 0;
+		float uv_x				= 0.0f;
+		float uv_y				= 0.0f;
+		float uv_w				= 0.0f;
+		float uv_h				= 0.0f;
 	};
 
 	struct font
@@ -1833,7 +1834,13 @@ namespace vekt
 
 		vec2 pen = position;
 
-		auto draw_char = [&](const glyph& g, unsigned long c) {
+		auto draw_char = [&](const glyph& g, unsigned long c, unsigned long previous_char) {
+			if (previous_char != 0)
+			{
+				const float kern_amt = static_cast<float>(text.target_font->glyph_info[previous_char].kern_advance[c]) * pixel_scale;
+				pen.x += kern_amt;
+			}
+
 			const float quad_left	= pen.x + g.x_offset;
 			const float quad_top	= pen.y + g.y_offset;
 			const float quad_right	= quad_left + g.width;
@@ -1890,18 +1897,20 @@ namespace vekt
 		float		   max_y_offset = 0;
 		for (c = (uint8_t*)text.text.c_str(); *c; c++)
 		{
-			auto character = *c;
-			auto ch		   = text.target_font->glyph_info[character];
-			max_y_offset   = math::max(max_y_offset, -ch.y_offset);
+			auto		 character = *c;
+			const glyph& ch		   = text.target_font->glyph_info[character];
+			max_y_offset		   = math::max(max_y_offset, -ch.y_offset);
 		}
 
 		pen.y += max_y_offset;
 
+		unsigned long previous_char = 0;
 		for (c = (uint8_t*)text.text.c_str(); *c; c++)
 		{
-			auto character = *c;
-			auto ch		   = text.target_font->glyph_info[character];
-			draw_char(ch, character);
+			auto		 character = *c;
+			const glyph& ch		   = text.target_font->glyph_info[character];
+			draw_char(ch, character, previous_char);
+			previous_char = character;
 		}
 	}
 
@@ -2356,6 +2365,9 @@ namespace vekt
 			max_height = static_cast<int>(math::max(max_height, glyph_info.height));
 
 			stbtt_GetCodepointHMetrics(&stb_font, i, &glyph_info.advance_x, &glyph_info.left_bearing);
+
+			for (int j = 0; j < 128; j++)
+				glyph_info.kern_advance[j] = stbtt_GetCodepointKernAdvance(&stb_font, i, j);
 		}
 
 		const int required_rows		= static_cast<int>(math::ceilf(static_cast<float>(total_width) / static_cast<float>(config.atlas_width)));
