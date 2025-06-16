@@ -21,6 +21,14 @@
 
 app* app::s_app = nullptr;
 
+/*
+	VERTEX & INDEX BUFFERS RE ALLOCATING
+	DRAW PASS CLIP OPTIMIZE
+	TEXT SIZE CALC EVERY FRAME NO NO
+
+*/
+vekt::widget* aq = nullptr;
+
 void app::init()
 {
 	vekt::config.on_log = [](vekt::log_verbosity verb, const char* log...) {
@@ -53,8 +61,8 @@ void app::init()
 	_vekt_builder->set_root(_vekt_root);
 	_vekt_builder->add_input_layer(0, _vekt_root);
 
-	_screen_width  = 800;
-	_screen_height = 600;
+	_screen_width  = 1920;
+	_screen_height = 1080;
 	_window.init(_screen_width, _screen_height);
 	_backend.init(*_vekt_builder);
 
@@ -78,6 +86,12 @@ void app::uninit()
 
 void app::update()
 {
+	// if (aq)
+	// {
+	// 	static float a = 0.0f;
+	// 	a += 0.00001f;
+	// 	aq->set_pos_x(a, vekt::helper_pos_type::relative);
+	// }
 	_window.poll();
 
 	const vekt::vec2 screen_size = {static_cast<float>(_screen_width), static_cast<float>(_screen_height)};
@@ -170,51 +184,94 @@ void app::create_some_widgets()
 		some_bg->set_pos_y(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
 		some_bg->set_width(0.5f, vekt::helper_size_type::relative);
 		some_bg->set_height(0.5f, vekt::helper_size_type::relative);
+		// some_bg->get_data_widget().child_positioning = vekt::child_positioning::column;
+		some_bg->get_data_widget().spacing	   = 10;
+		some_bg->get_data_widget().margins.top = 10;
+		some_bg->get_data_widget().debug_name  = "GreenBG";
 
-		vekt::gfx_rect& rect = some_bg->set_gfx_type_rect();
-		rect.color_start	 = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-		rect.color_end		 = vekt::vec4(0.2f, 0.7f, 0.2f, 1.0f);
-		rect.clip_children	 = true;
-		rect.rounding		 = 36.0f;
-		//	rect.thickness				 = 24;
-		// rect.aa_thickness = 2;
+		vekt::gfx_filled_rect& rect = some_bg->set_gfx_type_filled_rect();
+
+		rect.color_start = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+		rect.color_end	 = vekt::vec4(0.2f, 0.7f, 0.2f, 1.0f);
+		// rect.clip_children			= true;
+		rect.rounding = 36.0f;
+		//	rect.aa_thickness = 2;
+		rect.outline_color	   = vekt::vec4(1, 1, 1, 1);
+		rect.outline_thickness = 10;
+		_vekt_root->add_child(some_bg);
+		aq = some_bg;
 	}
 
 	vekt::widget* child = _vekt_builder->allocate();
 	{
 		child->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-		child->set_pos_y(0.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-		child->set_width(0.5f, vekt::helper_size_type::relative);
-		child->set_height(0.5f, vekt::helper_size_type::relative);
-		vekt::gfx_rect& rect = child->set_gfx_type_rect();
-		rect.color_start	 = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-		rect.color_end		 = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-		// rect.rounding		 = 12.0f;
-		rect.clip_children = true;
-		//   rect.segments		 = 1;
-		//   rect.thickness				 = 24;
-		//   rect.aa_thickness			 = 2;
+		child->set_pos_y(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+		child->set_width(1.0f, vekt::helper_size_type::relative);
+		child->set_height(0.1f, vekt::helper_size_type::relative);
+		child->get_data_widget().debug_name = "Child";
 
+		vekt::gfx_filled_rect& rect = child->set_gfx_type_filled_rect();
+		rect.color_start			= vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+		rect.color_end				= vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+		// rect.rounding		 = 12.0f;
+		// rect.clip_children = true;
+		//   rect.segments		 = 1;
+		//   rect.aa_thickness			 = 2;
 		some_bg->add_child(child);
 	}
 
-	vekt::widget* child2 = _vekt_builder->allocate();
+	vekt::widget* text = _vekt_builder->allocate();
 	{
-		child2->set_pos_x(0.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::start);
-		child2->set_pos_y(1.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::end);
-		child2->set_width(0.5f, vekt::helper_size_type::relative);
-		child2->set_height(1.6f, vekt::helper_size_type::relative);
-		child2->get_gfx_data().type = vekt::gfx_type::text;
+		text->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+		text->set_pos_y(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+		text->get_data_widget().debug_name = "Text";
 
-		vekt::gfx_text& text = child2->get_gfx_text();
-		text.text			 = "DdYYdYDY selAgmY beyBi";
-		text.target_font	 = _vekt_font;
-		text.color_start	 = vekt::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		text.color_end		 = vekt::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-		text.color_direction = vekt::direction::vertical;
+		text->set_width(1.5f, vekt::helper_size_type::relative);
+		text->set_height(0.1f, vekt::helper_size_type::relative);
+		vekt::gfx_text& txt = text->set_gfx_type_text();
+		txt.text			= "A";
+		txt.target_font		= _vekt_font;
+		txt.color_start = txt.color_end = vekt::vec4(1, 1, 1, 1);
+		child->add_child(text);
+	}
+	return;
 
-		child->add_child(child2);
+	for (int a = 0; a < 10; a++)
+	{
+		vekt::widget* child2 = _vekt_builder->allocate();
+		{
+			child2->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+			// child2->set_pos_y(0.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
+			child2->set_width(5.5f, vekt::helper_size_type::relative);
+			child2->set_height(0.1f, vekt::helper_size_type::relative);
+			vekt::gfx_filled_rect& rect = child2->set_gfx_type_filled_rect();
+			rect.color_start			= vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+			rect.color_end				= vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+			// rect.rounding		 = 12.0f;
+			//	rect.clip_children = true;
+			//   rect.segments		 = 1;
+			//   rect.thickness				 = 24;
+			//   rect.aa_thickness			 = 2;
+
+			some_bg->add_child(child2);
+		}
 	}
 
-	_vekt_root->add_child(some_bg);
+	//	vekt::widget* child2 = _vekt_builder->allocate();
+	//	{
+	//		child2->set_pos_x(0.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::start);
+	//		child2->set_pos_y(1.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::end);
+	//		child2->set_width(0.5f, vekt::helper_size_type::relative);
+	//		child2->set_height(1.6f, vekt::helper_size_type::relative);
+	//		child2->get_gfx_data().type = vekt::gfx_type::text;
+	//
+	//		vekt::gfx_text& text = child2->get_gfx_text();
+	//		text.text			 = "This is el sample test.";
+	//		text.target_font	 = _vekt_font;
+	//		text.color_start	 = vekt::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	//		text.color_end		 = vekt::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+	//		text.color_direction = vekt::direction::vertical;
+	//
+	//		child->add_child(child2);
+	//	}
 }

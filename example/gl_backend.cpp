@@ -49,7 +49,6 @@ void gl_backend::init(vekt::builder& builder)
 	// glEnable(GL_DEPTH_TEST);
 	//  glDisable(GL_DEPTH_TEST);
 	// glDisable(GL_STENCIL_TEST);
-	glEnable(GL_SCISSOR_TEST);
 	// glDepthMask(GL_FALSE);
 
 	glEnable(GL_CULL_FACE);
@@ -114,10 +113,12 @@ void gl_backend::uninit()
 
 void gl_backend::start_frame()
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDisable(GL_SCISSOR_TEST);
 	glClearColor((GLfloat)0.8f, (GLfloat)0.8f, (GLfloat)0.8f, (GLfloat)1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_SCISSOR_TEST);
 
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glViewport(0, 0, (GLsizei)_width, (GLsizei)_height);
 
 	int fb_width  = (int)(_width);
@@ -261,6 +262,9 @@ void gl_backend::create_font_texture(unsigned int width, unsigned int height) {}
 void gl_backend::draw_basic(const vekt::basic_draw_buffer& db)
 {
 	if (_skipped_draw) return;
+
+	GLboolean is_scissor_test_enabled;
+	glGetBooleanv(GL_SCISSOR_TEST, &is_scissor_test_enabled);
 	set_scissors(db.clip.x, db.clip.y, db.clip.z, db.clip.w);
 
 	shader_data& data = _basic_shader;
@@ -281,6 +285,7 @@ void gl_backend::draw_basic(const vekt::basic_draw_buffer& db)
 void gl_backend::draw_text(const vekt::text_draw_buffer& db)
 {
 	if (_skipped_draw) return;
+
 	set_scissors(db.clip.x, db.clip.y, db.clip.z, db.clip.w);
 
 	shader_data& data = _text_shader;
@@ -308,7 +313,7 @@ void gl_backend::atlas_created(vekt::atlas* atlas)
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, atlas->get_width(), atlas->get_height(), 0, GL_RED, GL_UNSIGNED_BYTE, 0);
-	
+
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

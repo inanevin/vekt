@@ -45,10 +45,8 @@ namespace vekt
 #endif
 
 #define MEMMOVE(...) memmove(__VA_ARGS__)
-#define MALLOC(SZ)	 malloc(SZ)
 #define REALLOC(...) realloc(__VA_ARGS__)
 #define MEMCPY(...)	 memcpy(__VA_ARGS__)
-#define FREE(X)		 free(X)
 #define ASSERT(...)	 assert(__VA_ARGS__)
 
 #ifndef VEKT_STRING
@@ -86,6 +84,20 @@ namespace vekt
 	if (vekt::config.on_log) vekt::config.on_log(vekt::log_verbosity::error, __VA_ARGS__)
 #define V_WARN(...)                                                                                                                                                                                                                                                \
 	if (vekt::config.on_log) vekt::config.on_log(vekt::log_verbosity::warning, __VA_ARGS__)
+
+	static inline void* mmm(size_t sz)
+	{
+		V_LOG("Malloced %d", sz);
+		return malloc(sz);
+	}
+
+	static inline void fff(void* ptr)
+	{
+		// V_LOG("freed");
+		free(ptr);
+	}
+#define MALLOC(SZ) mmm(SZ)
+#define FREE(X)	   fff(X)
 
 	////////////////////////////////////////////////////////////////////////////////
 	// :: COMMON CONTAINERS
@@ -151,6 +163,16 @@ namespace vekt
 			_count++;
 		}
 
+		inline void increment_back()
+		{
+			const bool req_place = _count >= _capacity;
+			check_grow();
+			if (req_place) new (&_elements[_count]) T();
+			_count++;
+		}
+
+		inline T& get_back() { return _elements[_count - 1]; }
+
 		inline void remove(unsigned int index)
 		{
 			if (index >= _count) { return; }
@@ -205,10 +227,10 @@ namespace vekt
 			_capacity = new_capacity;
 		}
 
-		inline void resize(unsigned int sz)
+		inline void resize(unsigned int sz, bool call_dest = true)
 		{
 			// Handle destructors if shrinking.
-			if (sz < _count)
+			if (call_dest && sz < _count)
 			{
 				for (unsigned int i = sz; i < _count; ++i)
 					_elements[i].~T();
@@ -216,7 +238,7 @@ namespace vekt
 
 			if (sz > _capacity)
 			{
-				T* new_elements = (T*)malloc(sz * sizeof(T));
+				T* new_elements = (T*)MALLOC(sz * sizeof(T));
 				if (!new_elements) throw std::bad_alloc();
 
 				// Move existing elements
@@ -650,11 +672,25 @@ namespace vekt
 	enum class gfx_type
 	{
 		none,
-		rect,
+		filled_rect,
+		stroke_rect,
 		text,
 	};
 
-	struct gfx_rect
+	struct gfx_filled_rect
+	{
+		vec4		 color_start	   = {};
+		vec4		 color_end		   = {};
+		float		 rounding		   = 0.0f;
+		unsigned int segments		   = 0;
+		unsigned int outline_thickness = 0;
+		vec4		 outline_color	   = {};
+		unsigned int aa_thickness	   = 0;
+		direction	 color_direction   = direction::horizontal;
+		bool		 clip_children	   = false;
+	};
+
+	struct gfx_stroke_rect
 	{
 		vec4		 color_start	 = {};
 		vec4		 color_end		 = {};
@@ -675,12 +711,25 @@ namespace vekt
 		vec4		 color_start	 = {};
 		vec4		 color_end		 = {};
 		direction	 color_direction = direction::horizontal;
+		bool		 _dirty			 = true;
+
+		inline void set_text(const VEKT_STRING& txt)
+		{
+			text   = txt;
+			_dirty = true;
+		}
+
+		inline void set_font(font* fnt)
+		{
+			target_font = fnt;
+			_dirty		= true;
+		}
 	};
 
 	struct widget_gfx
 	{
 
-		VEKT_VARIANT<gfx_text, gfx_rect> gfx;
+		VEKT_VARIANT<gfx_text, gfx_filled_rect, gfx_stroke_rect> gfx;
 
 		void*		 user_data	= nullptr;
 		gfx_type	 type		= gfx_type::none;
@@ -703,6 +752,7 @@ namespace vekt
 
 	struct widget_data
 	{
+		VEKT_STRING				 debug_name		   = "";
 		widget*					 parent			   = nullptr;
 		custom_hover			 on_hover_begin	   = nullptr;
 		custom_hover			 on_hover_end	   = nullptr;
@@ -853,12 +903,13 @@ namespace vekt
 			}
 		}
 
-		inline void			set_draw_order(bool draw_order) { _widget_gfx.draw_order = draw_order; }
-		inline bool			get_is_visible() const { return _widget_data.flags & widget_flags::wf_visible; }
-		inline widget_data& get_data_widget() { return _widget_data; }
-		inline widget_gfx&	get_gfx_data() { return _widget_gfx; }
-		inline gfx_text&	get_gfx_text() { return set_gfx_type_text(); }
-		inline gfx_rect&	get_gfx_rect() { return set_gfx_type_rect(); }
+		inline void				set_draw_order(bool draw_order) { _widget_gfx.draw_order = draw_order; }
+		inline bool				get_is_visible() const { return _widget_data.flags & widget_flags::wf_visible; }
+		inline widget_data&		get_data_widget() { return _widget_data; }
+		inline widget_gfx&		get_gfx_data() { return _widget_gfx; }
+		inline gfx_text&		get_gfx_text() { return set_gfx_type_text(); }
+		inline gfx_filled_rect& get_gfx_filled_rect() { return set_gfx_type_filled_rect(); }
+		inline gfx_stroke_rect& get_gfx_stroke_rect() { return set_gfx_type_stroke_rect(); }
 
 		inline void set_gfx_type_none() { _widget_gfx.type = gfx_type::none; }
 
@@ -870,12 +921,20 @@ namespace vekt
 			return std::get<gfx_text>(_widget_gfx.gfx);
 		}
 
-		inline gfx_rect& set_gfx_type_rect()
+		inline gfx_filled_rect& set_gfx_type_filled_rect()
 		{
-			if (_widget_gfx.type == gfx_type::rect) return std::get<gfx_rect>(_widget_gfx.gfx);
-			_widget_gfx.gfx	 = gfx_rect();
-			_widget_gfx.type = gfx_type::rect;
-			return std::get<gfx_rect>(_widget_gfx.gfx);
+			if (_widget_gfx.type == gfx_type::filled_rect) return std::get<gfx_filled_rect>(_widget_gfx.gfx);
+			_widget_gfx.gfx	 = gfx_filled_rect();
+			_widget_gfx.type = gfx_type::filled_rect;
+			return std::get<gfx_filled_rect>(_widget_gfx.gfx);
+		}
+
+		inline gfx_stroke_rect& set_gfx_type_stroke_rect()
+		{
+			if (_widget_gfx.type == gfx_type::stroke_rect) return std::get<gfx_stroke_rect>(_widget_gfx.gfx);
+			_widget_gfx.gfx	 = gfx_stroke_rect();
+			_widget_gfx.type = gfx_type::stroke_rect;
+			return std::get<gfx_stroke_rect>(_widget_gfx.gfx);
 		}
 
 		inline bool is_point_in_bounds(unsigned int x, unsigned int y)
@@ -889,6 +948,8 @@ namespace vekt
 			static_assert(sizeof(T) < VEKT_USER_DATA_SIZE);
 			return static_cast<T*>(&_user_data);
 		}
+
+		inline vec4 get_clip_rect() const { return {_widget_data.final_pos.x, _widget_data.final_pos.y, _widget_data.final_size.x, _widget_data.final_size.y}; }
 
 	private:
 		void size_pass();
@@ -1075,12 +1136,14 @@ namespace vekt
 		input_event_result on_key_event(const key_event& ev);
 		void			   add_input_layer(unsigned int priority, widget* root);
 		void			   remove_input_layer(unsigned int priority);
-		void			   add_rect(const gfx_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data);
-		void			   add_text(const gfx_text& text, const vec2& position, unsigned int draw_order, void* user_data);
+		void			   add_filled_rect(const gfx_filled_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data);
+		void			   add_stroke_rect(const gfx_stroke_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data);
+		void			   add_text(const gfx_text& text, const vec2& position, const vec2& size, unsigned int draw_order, void* user_data);
 		static vec2		   get_text_size(const gfx_text& text);
 		basic_draw_buffer* get_draw_buffer_basic(unsigned int draw_order, void* user_data);
 		text_draw_buffer*  get_draw_buffer_text(unsigned int draw_order, void* user_data);
 		bool			   push_to_clip_stack(const vec4& rect);
+		bool			   push_to_clip_stack_if_intersects(const vec4& rect);
 		void			   pop_clip_stack();
 		vec4			   calculate_intersection(const vec4& clip0, const vec4& clip1) const;
 
@@ -1128,6 +1191,12 @@ namespace vekt
 		widget*						  _last_hovered	 = nullptr;
 		draw_basic_callback			  _on_draw_basic = nullptr;
 		draw_text_callback			  _on_draw_text	 = nullptr;
+
+		pod_vector<vec2> _reuse_outer_path;
+		pod_vector<vec2> _reuse_inner_path;
+		pod_vector<vec2> _reuse_outline_path;
+		pod_vector<vec2> _reuse_aa_outer_path;
+		pod_vector<vec2> _reuse_aa_inner_path;
 	};
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -1327,6 +1396,7 @@ namespace vekt
 		{
 			w->pos_pass();
 			w->pos_pass_children();
+			w->pos_pass_post();
 		}
 	}
 
@@ -1349,7 +1419,7 @@ namespace vekt
 			for (widget* w : _widget_data.children)
 			{
 				w->_widget_data.final_pos.y = child_y;
-				child_y += _widget_data.spacing;
+				child_y += _widget_data.spacing + w->_widget_data.final_size.y;
 			}
 		}
 
@@ -1358,6 +1428,19 @@ namespace vekt
 
 	void widget::size_pass()
 	{
+
+		if (_widget_gfx.type == gfx_type::text)
+		{
+			gfx_text& txt = get_gfx_text();
+			if (txt._dirty)
+			{
+				txt._dirty				= false;
+				_widget_data.final_size = builder::get_text_size(get_gfx_text());
+			}
+
+			return;
+		}
+
 		if (_widget_data.flags & widget_flags::wf_size_x_absolute)
 			_widget_data.final_size.x = _widget_data.size.x;
 		else if (_widget_data.parent && _widget_data.flags & widget_flags::wf_size_x_relative)
@@ -1369,8 +1452,6 @@ namespace vekt
 			_widget_data.final_size.y = (_widget_data.parent->_widget_data.final_size.y - _widget_data.parent->_widget_data.margins.top - _widget_data.parent->_widget_data.margins.bottom) * _widget_data.size.y;
 
 		size_copy_check();
-
-		if (_widget_gfx.type == gfx_type::text) { _widget_data.final_size = builder::get_text_size(get_gfx_text()); }
 
 		if (_widget_data.custom_size_pass) _widget_data.custom_size_pass(this);
 	}
@@ -1472,33 +1553,39 @@ namespace vekt
 
 	bool widget::draw_pass_clip_check(builder& builder)
 	{
-		if (_widget_gfx.type == gfx_type::rect && get_gfx_rect().clip_children) { return builder.push_to_clip_stack({_widget_data.final_pos.x, _widget_data.final_pos.y, _widget_data.final_size.x, _widget_data.final_size.y}); }
+		if (_widget_gfx.type == gfx_type::filled_rect && get_gfx_filled_rect().clip_children) { return builder.push_to_clip_stack(get_clip_rect()); }
+		else if (_widget_gfx.type == gfx_type::stroke_rect && get_gfx_stroke_rect().clip_children) { return builder.push_to_clip_stack(get_clip_rect()); }
 		return false;
 	}
 
 	void widget::draw_pass(builder& builder)
 	{
-		if (_widget_gfx.type == gfx_type::rect) { builder.add_rect(_widget_gfx.get_data<gfx_rect>(), _widget_data.final_pos, _widget_data.final_pos + _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data); }
-		else if (_widget_gfx.type == gfx_type::text) { builder.add_text(_widget_gfx.get_data<gfx_text>(), _widget_data.final_pos, _widget_gfx.draw_order, _widget_gfx.user_data); }
+		if (_widget_gfx.type == gfx_type::filled_rect) { builder.add_filled_rect(_widget_gfx.get_data<gfx_filled_rect>(), _widget_data.final_pos, _widget_data.final_pos + _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data); }
+		else if (_widget_gfx.type == gfx_type::stroke_rect) { builder.add_stroke_rect(_widget_gfx.get_data<gfx_stroke_rect>(), _widget_data.final_pos, _widget_data.final_pos + _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data); }
+		else if (_widget_gfx.type == gfx_type::text) { builder.add_text(_widget_gfx.get_data<gfx_text>(), _widget_data.final_pos, _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data); }
 	}
 
 	void widget::draw_pass_children(builder& builder)
 	{
+		const bool clip_children = (_widget_gfx.type == gfx_type::filled_rect && get_gfx_filled_rect().clip_children) || _widget_gfx.type == gfx_type::stroke_rect && get_gfx_stroke_rect().clip_children;
+		if (clip_children) builder.push_to_clip_stack_if_intersects(get_clip_rect());
+
 		for (widget* w : _widget_data.children)
 		{
-			const bool clipped = w->draw_pass_clip_check(builder);
-			if (!clipped)
-			{
-				w->draw_pass(builder);
-				w->draw_pass_children(builder);
-			}
-			w->draw_pass_clip_check_end(builder);
+			// For this child, whether it clips its own children or not, we check if it intersects into currect clip rect and draw only if so.
+			const vec4 intersection = builder.calculate_intersection(builder.get_current_clip(), w->get_clip_rect());
+			 if (intersection.z <= 0 || intersection.w <= 0) continue;
+
+			w->draw_pass(builder);
+			w->draw_pass_children(builder);
 		}
+
+		if (clip_children) builder.pop_clip_stack();
 	}
 
 	void widget::draw_pass_clip_check_end(builder& builder)
 	{
-		if (_widget_gfx.type == gfx_type::rect && get_gfx_rect().clip_children) builder.pop_clip_stack();
+		if (_widget_gfx.type == gfx_type::filled_rect && get_gfx_filled_rect().clip_children || (_widget_gfx.type == gfx_type::stroke_rect && get_gfx_stroke_rect().clip_children)) { builder.pop_clip_stack(); }
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -1529,8 +1616,8 @@ namespace vekt
 			db.vertices.resize(0);
 			db.indices.resize(0);
 		}
-		_basic_draw_buffers.resize(0);
-		_text_draw_buffers.resize(0);
+		_basic_draw_buffers.resize(0, false);
+		_text_draw_buffers.resize(0, false);
 		_clip_stack.resize(0);
 
 		/* size & pos & draw */
@@ -1545,8 +1632,9 @@ namespace vekt
 		_root->pos_pass_children();
 		_root->pos_pass_post();
 
-		_clip_stack.push_back({0.0f, 0.0f, screen_size.x, screen_size.y});
 		_root->draw_pass(bd);
+
+		_clip_stack.push_back({0.0f, 0.0f, screen_size.x, screen_size.y});
 		_root->draw_pass_children(bd);
 		_clip_stack.remove(_clip_stack.size() - 1);
 	}
@@ -1735,85 +1823,124 @@ namespace vekt
 		return nullptr;
 	}
 
-	void builder::add_rect(const gfx_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data)
+	void builder::add_filled_rect(const gfx_filled_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data)
 	{
 		basic_draw_buffer* db = get_draw_buffer_basic(draw_order, user_data);
 
-		pod_vector<vec2> outer_path;
-		pod_vector<vec2> inner_path;
+		_reuse_outer_path.resize(0);
+		_reuse_outline_path.resize(0);
+
+		const bool has_aa		= rect.aa_thickness > 0;
+		const bool has_rounding = rect.rounding > 0.0f;
+		const bool has_outline	= rect.outline_thickness > 0;
+
+		if (has_rounding)
+			generate_rounded_rect(_reuse_outer_path, min, max, rect.rounding, rect.segments);
+		else
+			generate_sharp_rect(_reuse_outer_path, min, max);
+
+		if (has_outline) { generate_offset_rect(_reuse_outline_path, _reuse_outer_path, -static_cast<float>(rect.outline_thickness)); }
+
+		_reuse_aa_outer_path.resize(0);
+
+		if (has_aa)
+		{
+			if (has_outline)
+				generate_offset_rect(_reuse_aa_outer_path, _reuse_outline_path, -static_cast<float>(rect.aa_thickness));
+			else
+				generate_offset_rect(_reuse_aa_outer_path, _reuse_outer_path, -static_cast<float>(rect.aa_thickness));
+		}
+
+		const unsigned int out_start = db->vertices.size();
+		add_vertices(db, _reuse_outer_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
+
+		if (has_rounding)
+		{
+			const unsigned int central_start = db->vertices.size();
+			add_central_vertex(db, rect.color_start, rect.color_end, min, max);
+			add_filled_rect_central(db, out_start, central_start, _reuse_outer_path.size());
+		}
+		else
+			add_filled_rect(db, out_start, _reuse_outer_path.size());
+
+		unsigned int outline_start = 0;
+
+		if (has_outline)
+		{
+			// add original vertices
+			const unsigned int copy_start = db->vertices.size();
+			add_vertices(db, _reuse_outer_path, rect.outline_color, rect.outline_color, direction::horizontal, min, max);
+
+			outline_start = db->vertices.size();
+			add_vertices(db, _reuse_outline_path, rect.outline_color, rect.outline_color, vekt::direction::horizontal, min, max);
+			add_strip(db, outline_start, copy_start, _reuse_outline_path.size(), false);
+		}
+
+		if (has_aa)
+		{
+			const unsigned int out_aa_start = db->vertices.size();
+			add_vertices_aa(db, _reuse_aa_outer_path, out_start, 0.0f, min, max);
+
+			if (has_outline)
+				add_strip(db, out_aa_start, outline_start, _reuse_aa_outer_path.size(), false);
+			else
+				add_strip(db, out_aa_start, out_start, _reuse_aa_outer_path.size(), false);
+		}
+	}
+
+	void builder::add_stroke_rect(const gfx_stroke_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data)
+	{
+		basic_draw_buffer* db = get_draw_buffer_basic(draw_order, user_data);
+
+		_reuse_outer_path.resize(0);
+		_reuse_inner_path.resize(0);
 
 		const bool has_stroke	= rect.thickness > 0;
 		const bool has_aa		= rect.aa_thickness > 0;
 		const bool has_rounding = rect.rounding > 0.0f;
 
 		if (has_rounding)
-			generate_rounded_rect(outer_path, min, max, rect.rounding, rect.segments);
-		else
-			generate_sharp_rect(outer_path, min, max);
-
-		if (has_stroke)
 		{
-			if (has_rounding)
-				generate_rounded_rect(outer_path, min + vec2(rect.thickness, rect.thickness), max - vec2(rect.thickness, rect.thickness), rect.rounding, rect.segments);
-			else
-				generate_offset_rect(inner_path, outer_path, static_cast<float>(rect.thickness));
+			generate_rounded_rect(_reuse_outer_path, min, max, rect.rounding, rect.segments);
+			generate_rounded_rect(_reuse_inner_path, min + vec2(rect.thickness, rect.thickness), max - vec2(rect.thickness, rect.thickness), rect.rounding, rect.segments);
+		}
+		else
+		{
+			generate_sharp_rect(_reuse_outer_path, min, max);
+			generate_offset_rect(_reuse_inner_path, _reuse_outer_path, static_cast<float>(rect.thickness));
 		}
 
-		pod_vector<vec2> aa_outermost_path;
-		pod_vector<vec2> aa_innermost_path;
+		_reuse_aa_outer_path.resize(0);
+		_reuse_aa_inner_path.resize(0);
 
 		if (has_aa)
 		{
-			generate_offset_rect(aa_outermost_path, outer_path, -static_cast<float>(rect.aa_thickness));
-			if (has_stroke && !inner_path.empty()) { generate_offset_rect(aa_innermost_path, inner_path, static_cast<float>(rect.aa_thickness)); }
+			generate_offset_rect(_reuse_aa_outer_path, _reuse_outer_path, -static_cast<float>(rect.aa_thickness));
+			if (has_stroke && !_reuse_inner_path.empty()) { generate_offset_rect(_reuse_aa_inner_path, _reuse_inner_path, static_cast<float>(rect.aa_thickness)); }
 		}
 
-		if (has_stroke)
+		// Original stroke
+		const unsigned int out_start = db->vertices.size();
+		add_vertices(db, _reuse_outer_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
+		const unsigned int in_start = db->vertices.size();
+		add_vertices(db, _reuse_inner_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
+		add_strip(db, out_start, in_start, _reuse_outer_path.size(), false);
+
+		if (has_aa)
 		{
-			// Original stroke
-			const unsigned int out_start = db->vertices.size();
-			add_vertices(db, outer_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
-			const unsigned int in_start = db->vertices.size();
-			add_vertices(db, inner_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
-			add_strip(db, out_start, in_start, outer_path.size(), false);
+			// outer aa
+			const unsigned int out_aa_start = db->vertices.size();
+			add_vertices_aa(db, _reuse_aa_outer_path, out_start, 0.0f, min, max);
+			add_strip(db, out_aa_start, out_start, _reuse_aa_outer_path.size(), false);
 
-			if (has_aa)
-			{
-				// outer aa
-				const unsigned int out_aa_start = db->vertices.size();
-				add_vertices_aa(db, aa_outermost_path, out_start, 0.0f, min, max);
-				add_strip(db, out_aa_start, out_start, aa_outermost_path.size(), false);
-
-				//// inner aa
-				const unsigned int in_aa_start = db->vertices.size();
-				add_vertices_aa(db, aa_innermost_path, in_start, 0.0f, min, max);
-				add_strip(db, in_start, in_aa_start, aa_innermost_path.size(), false);
-			}
-		}
-		else
-		{
-			const unsigned int out_start = db->vertices.size();
-			add_vertices(db, outer_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
-
-			if (has_rounding)
-			{
-				const unsigned int central_start = db->vertices.size();
-				add_central_vertex(db, rect.color_start, rect.color_end, min, max);
-				add_filled_rect_central(db, out_start, central_start, outer_path.size());
-			}
-			else
-				add_filled_rect(db, out_start, outer_path.size());
-
-			if (has_aa)
-			{
-				const unsigned int out_aa_start = db->vertices.size();
-				add_vertices_aa(db, aa_outermost_path, out_start, 0.0f, min, max);
-				add_strip(db, out_aa_start, out_start, aa_outermost_path.size(), false);
-			}
+			//// inner aa
+			const unsigned int in_aa_start = db->vertices.size();
+			add_vertices_aa(db, _reuse_aa_inner_path, in_start, 0.0f, min, max);
+			add_strip(db, in_start, in_aa_start, _reuse_aa_inner_path.size(), false);
 		}
 	}
 
-	void builder::add_text(const gfx_text& text, const vec2& position, unsigned int draw_order, void* user_data)
+	void builder::add_text(const gfx_text& text, const vec2& position, const vec2& size, unsigned int draw_order, void* user_data)
 	{
 		if (text.target_font == nullptr)
 		{
@@ -1822,8 +1949,6 @@ namespace vekt
 		}
 		text_draw_buffer* db		  = get_draw_buffer_text(draw_order, user_data);
 		const float		  pixel_scale = text.target_font->_scale;
-
-		const vec2 size = get_text_size(text);
 
 		const unsigned int start_vertices_idx = db->vertices.size();
 		const unsigned int start_indices_idx  = db->indices.size();
@@ -1900,7 +2025,7 @@ namespace vekt
 			vtx_counter += 4;
 			idx_counter += 6;
 
-			pen.x += g.advance_x * pixel_scale;
+			pen.x += g.advance_x * pixel_scale + static_cast<float>(text.spacing);
 		};
 
 		const uint8_t* c;
@@ -1937,8 +2062,8 @@ namespace vekt
 		float total_x = 0.0f;
 		float max_y	  = 0.0f;
 
-		auto calc = [&](const glyph& g, unsigned long c) {
-			total_x += g.width + g.advance_x * pixel_scale + static_cast<float>(text.spacing);
+		auto calc = [&](const glyph& g, unsigned long c, bool is_last) {
+			total_x += g.width + (static_cast<float>(!is_last) * g.advance_x * pixel_scale) + static_cast<float>(text.spacing);
 			max_y = math::max(max_y, static_cast<float>(g.height));
 		};
 
@@ -1947,10 +2072,10 @@ namespace vekt
 		{
 			auto character = *c;
 			auto ch		   = text.target_font->glyph_info[character];
-			calc(ch, character);
+			calc(ch, character, (*(c + 1) == '\0'));
 		}
 
-		return {total_x, max_y};
+		return {total_x - text.spacing, max_y};
 	}
 
 	void builder::add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size, bool add_ccw)
@@ -2052,7 +2177,6 @@ namespace vekt
 	void builder::generate_offset_rect(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float distance)
 	{
 		if (base_path.size() < 2) return;
-		out_path.clear();
 		out_path.resize(base_path.size());
 
 		const size_t num_points = base_path.size();
@@ -2105,8 +2229,10 @@ namespace vekt
 
 	void builder::add_central_vertex(basic_draw_buffer* db, const vec4& color_start, const vec4& color_end, const vec2& min, const vec2& max)
 	{
-		vertex_basic vtx = {};
-		vtx.pos			 = (min + max) * 0.5f;
+		db->vertices.increment_back();
+
+		vertex_basic& vtx = db->vertices.get_back();
+		vtx.pos			  = (min + max) * 0.5f;
 
 #if defined VEKT_VERTEX_BASIC_PC || defined VEKT_VERTEX_BASIC_PCU
 		vtx.color = (color_start + color_end) * 0.5f;
@@ -2115,7 +2241,6 @@ namespace vekt
 #if defined VEKT_VERTEX_BASIC_PU || defined VEKT_VERTEX_BASIC_PCU
 		vtx.uv = vec2(0.5f, 0.5f);
 #endif
-		db->vertices.push_back(vtx);
 	}
 
 	void builder::generate_rounded_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max, float r, int segments)
@@ -2179,7 +2304,6 @@ namespace vekt
 	}
 	void builder::generate_sharp_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max)
 	{
-		out_path.clear();
 		out_path.push_back({min.x, min.y}); // Top-left
 		out_path.push_back({max.x, min.y}); // Top-right
 		out_path.push_back({max.x, max.y}); // Bottom-right
@@ -2194,8 +2318,8 @@ namespace vekt
 			if (db.clip.equals(clip) && db.draw_order == draw_order && db.user_data == user_data) { return &db; }
 		}
 
-		_basic_draw_buffers.push_back({});
-		basic_draw_buffer* db = &_basic_draw_buffers[_basic_draw_buffers.size() - 1];
+		_basic_draw_buffers.increment_back();
+		basic_draw_buffer* db = &_basic_draw_buffers.get_back();
 		db->draw_order		  = draw_order;
 		db->user_data		  = user_data;
 		db->clip			  = clip;
@@ -2212,9 +2336,9 @@ namespace vekt
 			if (db.clip.equals(clip) && db.draw_order == draw_order && db.user_data == user_data) { return &db; }
 		}
 
-		_text_draw_buffers.push_back({});
+		_text_draw_buffers.increment_back();
 
-		text_draw_buffer* db = &_text_draw_buffers[_text_draw_buffers.size() - 1];
+		text_draw_buffer* db = &_text_draw_buffers.get_back();
 		db->draw_order		 = draw_order;
 		db->user_data		 = user_data;
 		db->clip			 = clip;
@@ -2227,6 +2351,15 @@ namespace vekt
 		const vec4 effective_clip = calculate_intersection(parent_clip, rect);
 		_clip_stack.push_back(effective_clip);
 		return effective_clip.z <= 0 || effective_clip.w <= 0;
+	}
+
+	bool builder::push_to_clip_stack_if_intersects(const vec4& rect)
+	{
+		vec4	   parent_clip	  = _clip_stack.empty() ? vec4() : _clip_stack[_clip_stack.size() - 1];
+		const vec4 effective_clip = calculate_intersection(parent_clip, rect);
+		if (effective_clip.z <= 0 || effective_clip.w <= 0) return false;
+		_clip_stack.push_back(effective_clip);
+		return true;
 	}
 
 	void builder::pop_clip_stack()
