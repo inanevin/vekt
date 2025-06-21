@@ -1,8 +1,5 @@
 #include "app.hpp"
-#define VEKT_IMPL
-#define VEKT_VERTEX_BASIC_PCU
-#define VEKT_VERTEX_TEXT_PCU
-#include "vekt.hpp"
+
 #include "glfw_window.hpp"
 #include "gl_backend.hpp"
 #include <iostream>
@@ -18,16 +15,27 @@
 // VEKT_VERTEX_TEXT_PCU
 // VEKT_USER_DATA_SIZE
 // VEKT_NO_STB_IMPL
+#define VEKT_IMPL
+#define VEKT_VERTEX_BASIC_PCU
+#define VEKT_VERTEX_TEXT_PCU
+#include "vekt.hpp"
 
 app* app::s_app = nullptr;
 
-/*
-	VERTEX & INDEX BUFFERS RE ALLOCATING
-	DRAW PASS CLIP OPTIMIZE
-	TEXT SIZE CALC EVERY FRAME NO NO
-
-*/
-vekt::widget* aq = nullptr;
+class theme
+{
+public:
+	static constexpr vekt::vec4 color_dark0		  = {12.0f / 255.0f, 12.0f / 255.0f, 12.0f / 255.0f, 1.0f};
+	static constexpr vekt::vec4 color_dark1		  = {24.0f / 255.0f, 24.0f / 255.0f, 24.0f / 255.0f, 1.0f};
+	static constexpr vekt::vec4 color_dark2		  = {32.0f / 255.0f, 32.0f / 255.0f, 32.0f / 255.0f, 1.0f};
+	static constexpr vekt::vec4 color_dark3		  = {42.0f / 255.0f, 42.0f / 255.0f, 42.0f / 255.0f, 1.0f};
+	static constexpr vekt::vec4 color_light0	  = {200.0f / 255.0f, 200.0f / 255.0f, 200.0f / 255.0f, 1.0f};
+	static constexpr float		item_height		  = 24.0f;
+	static constexpr float		indent_vertical	  = 8.0f;
+	static constexpr float		margin_horizontal = 20.0f;
+	static constexpr float		border_size		  = 6.0f;
+	static constexpr float		outline_thickness = 2.0f;
+};
 
 void app::init()
 {
@@ -57,7 +65,8 @@ void app::init()
 		.widget_buffer_sz = 1024 * 1024,
 	});
 
-	_vekt_root = _vekt_builder->allocate();
+	_vekt_root								 = _vekt_builder->allocate();
+	_vekt_root->get_data_widget().debug_name = "Root";
 	_vekt_builder->set_root(_vekt_root);
 	_vekt_builder->add_input_layer(0, _vekt_root);
 
@@ -66,9 +75,10 @@ void app::init()
 	_window.init(_screen_width, _screen_height);
 	_backend.init(*_vekt_builder);
 
-	_vekt_font = vekt::font_manager::get().load_font("NotoSans-Regular.ttf", 32);
+	_vekt_font = vekt::font_manager::get().load_font("Roboto-Regular.ttf", 18);
 
-	create_some_widgets();
+	create_top_pane();
+	create_bottom_pane();
 }
 
 void app::uninit()
@@ -86,12 +96,6 @@ void app::uninit()
 
 void app::update()
 {
-	// if (aq)
-	// {
-	// 	static float a = 0.0f;
-	// 	a += 0.00001f;
-	// 	aq->set_pos_x(a, vekt::helper_pos_type::relative);
-	// }
 	_window.poll();
 
 	const vekt::vec2 screen_size = {static_cast<float>(_screen_width), static_cast<float>(_screen_height)};
@@ -153,10 +157,8 @@ void app::on_mouse(int button, int action)
 		type = vekt::input_event_type::repeated;
 
 	_vekt_builder->on_mouse_event({
-		.type	= type,
-		.button = button,
-		.x		= static_cast<unsigned int>(_mouse_x),
-		.y		= static_cast<unsigned int>(_mouse_y),
+		.type	  = type,
+		.button	  = button,
 	});
 }
 
@@ -176,102 +178,77 @@ void app::on_mouse_cursor(float x, float y)
 	_vekt_builder->on_mouse_move({x, y});
 }
 
-void app::create_some_widgets()
+void app::create_top_pane()
 {
-	vekt::widget* some_bg = _vekt_builder->allocate();
+	_vekt_root->get_data_widget().child_positioning = vekt::child_positioning::column;
+	_vekt_root->get_data_widget().spacing			= 0.0f;
+
+	vekt::widget* top_pane = _vekt_builder->allocate();
 	{
-		some_bg->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-		some_bg->set_pos_y(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-		some_bg->set_width(0.5f, vekt::helper_size_type::relative);
-		some_bg->set_height(0.5f, vekt::helper_size_type::relative);
-		// some_bg->get_data_widget().child_positioning = vekt::child_positioning::column;
-		some_bg->get_data_widget().spacing	   = 10;
-		some_bg->get_data_widget().margins.top = 10;
-		some_bg->get_data_widget().debug_name  = "GreenBG";
+		top_pane->set_pos_x(0.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::start);
+		top_pane->set_pos_y(0.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::start);
+		top_pane->set_width(1.0f, vekt::helper_size_type::relative);
+		top_pane->set_height(0.35f, vekt::helper_size_type::relative);
+		top_pane->get_data_widget().debug_name = "Top Pane";
 
-		vekt::gfx_filled_rect& rect = some_bg->set_gfx_type_filled_rect();
-
-		rect.color_start = vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-		rect.color_end	 = vekt::vec4(0.2f, 0.7f, 0.2f, 1.0f);
-		// rect.clip_children			= true;
-		rect.rounding = 36.0f;
-		//	rect.aa_thickness = 2;
-		rect.outline_color	   = vekt::vec4(1, 1, 1, 1);
-		rect.outline_thickness = 10;
-		_vekt_root->add_child(some_bg);
-		aq = some_bg;
+		vekt::gfx_filled_rect& left_pane_rect = top_pane->set_gfx_type_filled_rect();
+		left_pane_rect.color_start = left_pane_rect.color_end = theme::color_dark1;
+		_vekt_root->add_child(top_pane);
 	}
 
-	vekt::widget* child = _vekt_builder->allocate();
-	{
-		child->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-		child->set_pos_y(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-		child->set_width(1.0f, vekt::helper_size_type::relative);
-		child->set_height(0.1f, vekt::helper_size_type::relative);
-		child->get_data_widget().debug_name = "Child";
+	vekt::widget* divider = _vekt_builder->widget_horizontal_divider(theme::border_size, theme::color_dark0);
+	_vekt_root->add_child(divider);
+}
 
-		vekt::gfx_filled_rect& rect = child->set_gfx_type_filled_rect();
-		rect.color_start			= vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-		rect.color_end				= vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-		// rect.rounding		 = 12.0f;
-		// rect.clip_children = true;
-		//   rect.segments		 = 1;
-		//   rect.aa_thickness			 = 2;
-		some_bg->add_child(child);
+void app::create_bottom_pane()
+{
+	vekt::widget* bottom = _vekt_builder->allocate();
+	{
+		bottom->set_pos_x(0.0f, vekt::helper_pos_type::relative);
+		bottom->set_width(1.0f, vekt::helper_size_type::relative);
+		bottom->set_height(0.0f, vekt::helper_size_type::fill);
+		bottom->get_data_widget().child_positioning = vekt::child_positioning::row;
+		bottom->get_data_widget().debug_name		= "Bottom";
+		_vekt_root->add_child(bottom);
 	}
 
-	vekt::widget* text = _vekt_builder->allocate();
-	{
-		text->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-		text->set_pos_y(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-		text->get_data_widget().debug_name = "Text";
-
-		text->set_width(1.5f, vekt::helper_size_type::relative);
-		text->set_height(0.1f, vekt::helper_size_type::relative);
-		vekt::gfx_text& txt = text->set_gfx_type_text();
-		txt.text			= "A";
-		txt.target_font		= _vekt_font;
-		txt.color_start = txt.color_end = vekt::vec4(1, 1, 1, 1);
-		child->add_child(text);
-	}
-	return;
-
-	for (int a = 0; a < 10; a++)
-	{
-		vekt::widget* child2 = _vekt_builder->allocate();
+	auto create_pane = [&](bool create_div, const VEKT_STRING& name) -> vekt::widget* {
 		{
-			child2->set_pos_x(0.5f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-			// child2->set_pos_y(0.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::center);
-			child2->set_width(5.5f, vekt::helper_size_type::relative);
-			child2->set_height(0.1f, vekt::helper_size_type::relative);
-			vekt::gfx_filled_rect& rect = child2->set_gfx_type_filled_rect();
-			rect.color_start			= vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-			rect.color_end				= vekt::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-			// rect.rounding		 = 12.0f;
-			//	rect.clip_children = true;
-			//   rect.segments		 = 1;
-			//   rect.thickness				 = 24;
-			//   rect.aa_thickness			 = 2;
+			vekt::widget* pane = _vekt_builder->allocate();
+			pane->set_pos_y(0.0f, vekt::helper_pos_type::relative);
+			pane->set_height(1.0f, vekt::helper_size_type::relative);
+			pane->set_width(0.0f, vekt::helper_size_type::fill);
+			pane->get_data_widget().margins.left	  = theme::margin_horizontal;
+			pane->get_data_widget().margins.right	  = theme::margin_horizontal;
+			pane->get_data_widget().margins.top		  = theme::margin_horizontal;
+			pane->get_data_widget().margins.bottom	  = theme::margin_horizontal;
+			pane->get_data_widget().child_positioning = vekt::child_positioning::column;
+			pane->get_data_widget().debug_name		  = name;
 
-			some_bg->add_child(child2);
+			vekt::gfx_filled_rect& r = pane->get_gfx_filled_rect();
+			r.color_start = r.color_end = theme::color_dark1;
+			bottom->add_child(pane);
+
+			if (create_div)
+			{
+				vekt::widget* divider = _vekt_builder->widget_vertical_divider(theme::border_size, theme::color_dark0);
+				bottom->add_child(divider);
+			}
+
+			return pane;
 		}
+	};
+
+	vekt::widget* bottom_left = create_pane(true, "BottomLeft");
+	{
+		vekt::widget* button0							 = _vekt_builder->widget_button(theme::item_height, _vekt_font, "Button", theme::color_dark2, theme::color_light0);
+		button0->get_gfx_filled_rect().outline_thickness = theme::outline_thickness;
+		button0->get_gfx_filled_rect().outline_color	 = theme::color_dark3;
+		button0->get_gfx_filled_rect().hovered_color	 = theme::color_dark3;
+		button0->get_gfx_filled_rect().pressed_color	 = theme::color_dark1;
+		bottom_left->add_child(button0);
 	}
 
-	//	vekt::widget* child2 = _vekt_builder->allocate();
-	//	{
-	//		child2->set_pos_x(0.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::start);
-	//		child2->set_pos_y(1.0f, vekt::helper_pos_type::relative, vekt::helper_anchor_type::end);
-	//		child2->set_width(0.5f, vekt::helper_size_type::relative);
-	//		child2->set_height(1.6f, vekt::helper_size_type::relative);
-	//		child2->get_gfx_data().type = vekt::gfx_type::text;
-	//
-	//		vekt::gfx_text& text = child2->get_gfx_text();
-	//		text.text			 = "This is el sample test.";
-	//		text.target_font	 = _vekt_font;
-	//		text.color_start	 = vekt::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	//		text.color_end		 = vekt::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-	//		text.color_direction = vekt::direction::vertical;
-	//
-	//		child->add_child(child2);
-	//	}
+	vekt::widget* bottom_center = create_pane(true, "BottomCenter");
+	vekt::widget* bottom_right	= create_pane(false, "BottomRight");
 }

@@ -8,6 +8,7 @@ namespace vekt
 	class widget;
 	struct font;
 }
+
 class app
 {
 public:
@@ -25,7 +26,8 @@ public:
 	inline static app* get() { return s_app; }
 
 private:
-	void create_some_widgets();
+	void create_top_pane();
+	void create_bottom_pane();
 
 private:
 	static app*	   s_app;

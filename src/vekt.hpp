@@ -197,6 +197,9 @@ namespace vekt
 				}
 			}
 		}
+
+		inline void remove(iterator it) { remove(*it); }
+
 		inline void clear()
 		{
 			for (unsigned int i = 0; i < _count; ++i)
@@ -269,12 +272,22 @@ namespace vekt
 		inline bool			empty() const { return _count == 0; }
 		inline unsigned int size() const { return _count; }
 
-		iterator	   begin() { return _elements; }
-		const_iterator begin() const { return _elements; }
-		const_iterator cbegin() const { return _elements; }
-		iterator	   end() { return _elements + _count; }
-		const_iterator end() const { return _elements + _count; }
-		const_iterator cend() const { return _elements + _count; }
+		inline iterator find(T& t)
+		{
+			for (unsigned int i = 0; i < _count; i++)
+			{
+				if (t == _elements[i]) return _elements + i;
+			}
+
+			return end();
+		};
+
+		inline iterator		  begin() { return _elements; }
+		inline const_iterator begin() const { return _elements; }
+		inline const_iterator cbegin() const { return _elements; }
+		inline iterator		  end() { return _elements + _count; }
+		inline const_iterator end() const { return _elements + _count; }
+		inline const_iterator cend() const { return _elements + _count; }
 
 	private:
 		inline void check_grow()
@@ -519,7 +532,7 @@ namespace vekt
 		float w = 0.0f;
 
 		bool equals(const vec4& other) const { return math::equals(x, other.x, 0.1f) && math::equals(y, other.y, 0.1f) && math::equals(z, other.z, 0.1f) && math::equals(w, other.w, 0.1f); }
-		bool is_point_inside(const vec2& point) const { return point.x >= x && point.y <= x + z && point.y >= y && point.y <= y + w; }
+		bool is_point_inside(const vec2& point) const { return point.x >= x && point.x <= x + z && point.y >= y && point.y <= y + w; }
 
 		static inline vec4 lerp(const vec4& a, const vec4& b, float t) { return vec4(math::lerp(a.x, b.x, t), math::lerp(a.y, b.y, t), math::lerp(a.z, b.z, t), math::lerp(a.w, b.w, t)); }
 
@@ -561,18 +574,10 @@ namespace vekt
 		not_handled,
 	};
 
-	enum class input_event_phase
-	{
-		tunneling,
-		bubbling,
-	};
-
 	struct mouse_event
 	{
 		input_event_type type	= input_event_type::pressed;
 		int				 button = 0;
-		unsigned int	 x		= 0;
-		unsigned int	 y		= 0;
 	};
 
 	struct mouse_wheel_event
@@ -588,9 +593,11 @@ namespace vekt
 	};
 
 	class widget;
-	typedef input_event_result (*custom_mouse_event)(widget* w, const mouse_event& ev, input_event_phase& phase, widget*& last_widget);
-	typedef input_event_result (*custom_key_event)(widget* w, const key_event& ev, input_event_phase& phase, widget*& last_widget);
-	typedef input_event_result (*custom_mouse_wheel_event)(widget* w, const mouse_wheel_event& ev, input_event_phase& phase, widget*& last_widget);
+	typedef std::function<input_event_result(widget* w, const mouse_event& ev, widget*& last_widget)>		custom_mouse_event;
+	typedef std::function<input_event_result(widget* w, const key_event& ev, widget*& last_widget)>			custom_key_event;
+	typedef std::function<input_event_result(widget* w, const mouse_wheel_event& ev, widget*& last_widget)> custom_mouse_wheel_event;
+	typedef std::function<void(widget* w, const mouse_event& ev)>											custom_click_event;
+	typedef std::function<void(widget* w, const vec2& mouse, const vec2& mouse_delta)>						custom_mouse_drag_event;
 
 	////////////////////////////////////////////////////////////////////////////////
 	// :: WIDGET UTILS
@@ -614,7 +621,7 @@ namespace vekt
 		wf_size_y_max_children	 = 1 << 13,
 		wf_size_x_fill			 = 1 << 14,
 		wf_size_y_fill			 = 1 << 15,
-		wf_visible				 = 1 << 16,
+		wf_invisible			 = 1 << 16,
 		wf_pos_anchor_x_center	 = 1 << 17,
 		wf_pos_anchor_x_end		 = 1 << 18,
 		wf_pos_anchor_y_center	 = 1 << 19,
@@ -679,8 +686,10 @@ namespace vekt
 
 	struct gfx_filled_rect
 	{
-		vec4		 color_start	   = {};
-		vec4		 color_end		   = {};
+		vec4		 color_start	   = vec4(1, 1, 1, 1);
+		vec4		 color_end		   = vec4(1, 1, 1, 1);
+		vec4		 hovered_color	   = vec4(1, 1, 1, 0);
+		vec4		 pressed_color	   = vec4(1, 1, 1, 0);
 		float		 rounding		   = 0.0f;
 		unsigned int segments		   = 0;
 		unsigned int outline_thickness = 0;
@@ -692,11 +701,13 @@ namespace vekt
 
 	struct gfx_stroke_rect
 	{
-		vec4		 color_start	 = {};
-		vec4		 color_end		 = {};
+		vec4		 color_start	 = vec4(1, 1, 1, 1);
+		vec4		 color_end		 = vec4(1, 1, 1, 1);
+		vec4		 hovered_color	 = vec4(1, 1, 1, 0);
+		vec4		 pressed_color	 = vec4(1, 1, 1, 0);
 		float		 rounding		 = 0.0f;
 		unsigned int segments		 = 0;
-		unsigned int thickness		 = 0;
+		unsigned int thickness		 = 10;
 		unsigned int aa_thickness	 = 0;
 		direction	 color_direction = direction::horizontal;
 		bool		 clip_children	 = false;
@@ -708,8 +719,10 @@ namespace vekt
 		VEKT_STRING	 text			 = "";
 		font*		 target_font	 = nullptr;
 		unsigned int spacing		 = 0;
-		vec4		 color_start	 = {};
-		vec4		 color_end		 = {};
+		vec4		 color_start	 = vec4(1, 1, 1, 1);
+		vec4		 color_end		 = vec4(1, 1, 1, 1);
+		vec4		 hovered_color	 = vec4(1, 1, 1, 0);
+		vec4		 pressed_color	 = vec4(1, 1, 1, 0);
 		direction	 color_direction = direction::horizontal;
 		bool		 _dirty			 = true;
 
@@ -746,21 +759,21 @@ namespace vekt
 	// :: WIDGET
 	////////////////////////////////////////////////////////////////////////////////
 
-	typedef void (*custom_pos_pass)(widget*);
-	typedef void (*custom_size_pass)(widget*);
-	typedef void (*custom_hover)(widget*);
+	typedef std::function<void(widget*)> custom_func;
 
 	struct widget_data
 	{
 		VEKT_STRING				 debug_name		   = "";
 		widget*					 parent			   = nullptr;
-		custom_hover			 on_hover_begin	   = nullptr;
-		custom_hover			 on_hover_end	   = nullptr;
+		custom_func				 on_hover_begin	   = nullptr;
+		custom_func				 on_hover_end	   = nullptr;
 		custom_mouse_event		 on_mouse		   = nullptr;
 		custom_mouse_wheel_event on_mouse_wheel	   = nullptr;
+		custom_click_event		 on_mouse_clicked  = nullptr;
+		custom_mouse_drag_event	 on_mouse_dragged  = nullptr;
 		custom_key_event		 on_key			   = nullptr;
-		custom_pos_pass			 custom_pos_pass   = nullptr;
-		custom_size_pass		 custom_size_pass  = nullptr;
+		custom_func				 custom_pos_pass   = nullptr;
+		custom_func				 custom_size_pass  = nullptr;
 		pod_vector<widget*>		 children		   = {};
 		child_positioning		 child_positioning = child_positioning::none;
 		margins					 margins		   = {};
@@ -771,6 +784,7 @@ namespace vekt
 		vec2					 scroll_offset	   = {};
 		unsigned int			 flags			   = 0;
 		float					 spacing		   = 0.0f;
+		bool					 receive_input	   = false;
 	};
 
 	class widget
@@ -904,12 +918,14 @@ namespace vekt
 		}
 
 		inline void				set_draw_order(bool draw_order) { _widget_gfx.draw_order = draw_order; }
-		inline bool				get_is_visible() const { return _widget_data.flags & widget_flags::wf_visible; }
+		inline bool				get_is_visible() const { return !(_widget_data.flags & widget_flags::wf_invisible); }
 		inline widget_data&		get_data_widget() { return _widget_data; }
 		inline widget_gfx&		get_gfx_data() { return _widget_gfx; }
 		inline gfx_text&		get_gfx_text() { return set_gfx_type_text(); }
 		inline gfx_filled_rect& get_gfx_filled_rect() { return set_gfx_type_filled_rect(); }
 		inline gfx_stroke_rect& get_gfx_stroke_rect() { return set_gfx_type_stroke_rect(); }
+		inline bool				get_is_hovered() const { return _is_hovered; };
+		inline bool				get_is_pressed() const { return _press_states[0]; }
 
 		inline void set_gfx_type_none() { _widget_gfx.type = gfx_type::none; }
 
@@ -953,8 +969,8 @@ namespace vekt
 
 	private:
 		void size_pass();
-		void size_pass_children();
-		void size_pass_post();
+		void size_pass_children(pod_vector<widget*>& fill_x, pod_vector<widget*>& fill_y);
+		void size_pass_post(pod_vector<widget*>& fill_x, pod_vector<widget*>& fill_y);
 		void size_copy_check();
 		void pos_pass();
 		void pos_pass_children();
@@ -965,29 +981,29 @@ namespace vekt
 		void draw_pass_children(class builder& builder);
 
 		template <typename EventType>
-		input_event_result on_event_internal(const EventType& ev, input_event_phase phase, widget*& out_last_widget)
+		input_event_result on_event_internal(const EventType& ev, widget*& out_last_widget)
 		{
 			if constexpr (std::is_same_v<EventType, mouse_event>)
 			{
-				if (_widget_data.on_mouse)
+				if (_widget_data.receive_input && _widget_data.on_mouse)
 				{
-					const input_event_result res = _widget_data.on_mouse(this, ev, phase, out_last_widget);
+					const input_event_result res = _widget_data.on_mouse(this, ev, out_last_widget);
 					if (res == input_event_result::handled) return res;
 				}
 			}
 			else if constexpr (std::is_same_v<EventType, mouse_wheel_event>)
 			{
-				if (_widget_data.on_key)
+				if (_widget_data.receive_input && _widget_data.on_key)
 				{
-					const input_event_result res = _widget_data.on_mouse_wheel(this, ev, phase, out_last_widget);
+					const input_event_result res = _widget_data.on_mouse_wheel(this, ev, out_last_widget);
 					if (res == input_event_result::handled) return res;
 				}
 			}
 			else if constexpr (std::is_same_v<EventType, key_event>)
 			{
-				if (_widget_data.on_mouse_wheel)
+				if (_widget_data.receive_input && _widget_data.on_mouse_wheel)
 				{
-					const input_event_result res = _widget_data.on_key(this, ev, phase, out_last_widget);
+					const input_event_result res = _widget_data.on_key(this, ev, out_last_widget);
 					if (res == input_event_result::handled) return res;
 				}
 			}
@@ -996,14 +1012,14 @@ namespace vekt
 
 			out_last_widget = this;
 
-			if (phase == input_event_phase::tunneling)
+			for (widget* w : _widget_data.children)
 			{
-				for (widget* w : _widget_data.children)
-				{
-					return w->on_event_internal(ev, phase, out_last_widget);
-				}
+				const input_event_result res = w->on_event_internal(ev, out_last_widget);
+				if (res == input_event_result::handled) return res;
 			}
-			else
+
+			// Bubbling code if needed.
+			/*
 			{
 				if (_widget_data.parent)
 				{
@@ -1014,7 +1030,7 @@ namespace vekt
 					{
 						if (w == this)
 						{
-							if (sibling) return sibling->on_event_internal(ev, phase, out_last_widget);
+							if (sibling) { return sibling->find_deepest_child()->on_event_internal(ev, phase, out_last_widget); }
 						}
 						sibling = w;
 					}
@@ -1022,6 +1038,7 @@ namespace vekt
 					if (sibling == nullptr) return _widget_data.parent->on_event_internal(ev, phase, out_last_widget);
 				}
 			}
+			*/
 
 			return input_event_result::not_handled;
 		}
@@ -1034,6 +1051,8 @@ namespace vekt
 		widget_data	  _widget_data = {};
 		widget_gfx	  _widget_gfx  = {};
 		unsigned char _user_data[VEKT_USER_DATA_SIZE];
+		bool		  _is_hovered	   = false;
+		bool		  _press_states[3] = {false};
 	};
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -1136,9 +1155,9 @@ namespace vekt
 		input_event_result on_key_event(const key_event& ev);
 		void			   add_input_layer(unsigned int priority, widget* root);
 		void			   remove_input_layer(unsigned int priority);
-		void			   add_filled_rect(const gfx_filled_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data);
-		void			   add_stroke_rect(const gfx_stroke_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data);
-		void			   add_text(const gfx_text& text, const vec2& position, const vec2& size, unsigned int draw_order, void* user_data);
+		void			   add_filled_rect(const gfx_filled_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed);
+		void			   add_stroke_rect(const gfx_stroke_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed);
+		void			   add_text(const gfx_text& text, const vec2& position, const vec2& size, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed);
 		static vec2		   get_text_size(const gfx_text& text);
 		basic_draw_buffer* get_draw_buffer_basic(unsigned int draw_order, void* user_data);
 		text_draw_buffer*  get_draw_buffer_text(unsigned int draw_order, void* user_data);
@@ -1146,6 +1165,12 @@ namespace vekt
 		bool			   push_to_clip_stack_if_intersects(const vec4& rect);
 		void			   pop_clip_stack();
 		vec4			   calculate_intersection(const vec4& clip0, const vec4& clip1) const;
+
+		// Widgets
+
+		widget* widget_horizontal_divider(float height, const vec4& color = vec4(1, 1, 1, 1));
+		widget* widget_vertical_divider(float width, const vec4& color = vec4(1, 1, 1, 1));
+		widget* widget_button(float height, font* fnt, const VEKT_STRING& text, const vec4& color = vec4(0, 0, 0, 1), const vec4& text_color = vec4(1, 1, 1, 1));
 
 		inline vec4 get_current_clip() const { return _clip_stack.empty() ? vec4() : _clip_stack[_clip_stack.size() - 1]; }
 		inline void set_root(widget* root) { _root = root; }
@@ -1160,7 +1185,8 @@ namespace vekt
 
 		inline void deallocate(widget* w)
 		{
-			if (w == _last_hovered) _last_hovered = nullptr;
+			pod_vector<widget*>::iterator it = _press_state_history.find(w);
+			if (it != _press_state_history.end()) { _press_state_history.remove(it); }
 
 			for (widget* c : w->_widget_data.children)
 				deallocate(c);
@@ -1180,6 +1206,7 @@ namespace vekt
 		void	add_central_vertex(basic_draw_buffer* db, const vec4& color_start, const vec4& color_end, const vec2& min, const vec2& max);
 		void	add_vertices_aa(basic_draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max);
 		widget* find_widget_at(widget* current_widget, const vec2& mouse);
+		void	pass_hover_state(widget* w, const vec2& mouse);
 
 	private:
 		pool<widget>				  _widget_pool;
@@ -1187,16 +1214,19 @@ namespace vekt
 		pod_vector<input_layer>		  _input_layers;
 		pod_vector<basic_draw_buffer> _basic_draw_buffers;
 		pod_vector<text_draw_buffer>  _text_draw_buffers;
-		widget*						  _root			 = nullptr;
-		widget*						  _last_hovered	 = nullptr;
-		draw_basic_callback			  _on_draw_basic = nullptr;
-		draw_text_callback			  _on_draw_text	 = nullptr;
+		widget*						  _root				   = nullptr;
+		draw_basic_callback			  _on_draw_basic	   = nullptr;
+		draw_text_callback			  _on_draw_text		   = nullptr;
+		pod_vector<widget*>			  _press_state_history = {};
+		vec2						  _mouse_position	   = {};
 
-		pod_vector<vec2> _reuse_outer_path;
-		pod_vector<vec2> _reuse_inner_path;
-		pod_vector<vec2> _reuse_outline_path;
-		pod_vector<vec2> _reuse_aa_outer_path;
-		pod_vector<vec2> _reuse_aa_inner_path;
+		pod_vector<vec2>	_reuse_outer_path;
+		pod_vector<vec2>	_reuse_inner_path;
+		pod_vector<vec2>	_reuse_outline_path;
+		pod_vector<vec2>	_reuse_aa_outer_path;
+		pod_vector<vec2>	_reuse_aa_inner_path;
+		pod_vector<widget*> _reuse_fill_x;
+		pod_vector<widget*> _reuse_fill_y;
 	};
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -1346,9 +1376,9 @@ namespace vekt
 	void widget::set_visible(bool is_visible, bool recursive)
 	{
 		if (is_visible)
-			_widget_data.flags |= widget_flags::wf_visible;
+			_widget_data.flags &= ~widget_flags::wf_invisible;
 		else
-			_widget_data.flags &= ~widget_flags::wf_visible;
+			_widget_data.flags |= widget_flags::wf_invisible;
 
 		if (recursive)
 		{
@@ -1409,7 +1439,7 @@ namespace vekt
 			for (widget* w : _widget_data.children)
 			{
 				w->_widget_data.final_pos.x = child_x;
-				child_x += _widget_data.spacing;
+				child_x += _widget_data.spacing + w->_widget_data.final_size.x;
 			}
 		}
 		else if (_widget_data.child_positioning == child_positioning::column)
@@ -1456,17 +1486,17 @@ namespace vekt
 		if (_widget_data.custom_size_pass) _widget_data.custom_size_pass(this);
 	}
 
-	void widget::size_pass_children()
+	void widget::size_pass_children(pod_vector<widget*>& fill_x, pod_vector<widget*>& fill_y)
 	{
 		for (widget* w : _widget_data.children)
 		{
 			w->size_pass();
-			w->size_pass_children();
-			w->size_pass_post();
+			w->size_pass_children(fill_x, fill_y);
+			w->size_pass_post(fill_x, fill_y);
 		}
 	}
 
-	void widget::size_pass_post()
+	void widget::size_pass_post(pod_vector<widget*>& fill_x, pod_vector<widget*>& fill_y)
 	{
 		/*
 			Max/Total behaviour.
@@ -1514,8 +1544,10 @@ namespace vekt
 		/*
 			Expand/Fill behaviour.
 		*/
-		pod_vector<widget*> fill_x, fill_y;
-		float				non_fill_total_x = -_widget_data.spacing, non_fill_total_y = -_widget_data.spacing;
+		float non_fill_total_x = -_widget_data.spacing, non_fill_total_y = -_widget_data.spacing;
+
+		fill_x.resize(0);
+		fill_y.resize(0);
 
 		for (widget* w : _widget_data.children)
 		{
@@ -1560,9 +1592,15 @@ namespace vekt
 
 	void widget::draw_pass(builder& builder)
 	{
-		if (_widget_gfx.type == gfx_type::filled_rect) { builder.add_filled_rect(_widget_gfx.get_data<gfx_filled_rect>(), _widget_data.final_pos, _widget_data.final_pos + _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data); }
-		else if (_widget_gfx.type == gfx_type::stroke_rect) { builder.add_stroke_rect(_widget_gfx.get_data<gfx_stroke_rect>(), _widget_data.final_pos, _widget_data.final_pos + _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data); }
-		else if (_widget_gfx.type == gfx_type::text) { builder.add_text(_widget_gfx.get_data<gfx_text>(), _widget_data.final_pos, _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data); }
+		if (_widget_gfx.type == gfx_type::filled_rect)
+		{
+			builder.add_filled_rect(_widget_gfx.get_data<gfx_filled_rect>(), _widget_data.final_pos, _widget_data.final_pos + _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data, _is_hovered, _press_states[0]);
+		}
+		else if (_widget_gfx.type == gfx_type::stroke_rect)
+		{
+			builder.add_stroke_rect(_widget_gfx.get_data<gfx_stroke_rect>(), _widget_data.final_pos, _widget_data.final_pos + _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data, _is_hovered, _press_states[0]);
+		}
+		else if (_widget_gfx.type == gfx_type::text) { builder.add_text(_widget_gfx.get_data<gfx_text>(), _widget_data.final_pos, _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data, _is_hovered, _press_states[0]); }
 	}
 
 	void widget::draw_pass_children(builder& builder)
@@ -1574,7 +1612,7 @@ namespace vekt
 		{
 			// For this child, whether it clips its own children or not, we check if it intersects into currect clip rect and draw only if so.
 			const vec4 intersection = builder.calculate_intersection(builder.get_current_clip(), w->get_clip_rect());
-			 if (intersection.z <= 0 || intersection.w <= 0) continue;
+			if (intersection.z <= 0 || intersection.w <= 0) continue;
 
 			w->draw_pass(builder);
 			w->draw_pass_children(builder);
@@ -1621,13 +1659,15 @@ namespace vekt
 		_clip_stack.resize(0);
 
 		/* size & pos & draw */
+		_reuse_fill_x.resize(0);
+		_reuse_fill_y.resize(0);
 		builder& bd					   = *this;
 		_root->_widget_data.pos		   = {0.0f, 0.0f};
 		_root->_widget_data.size	   = screen_size;
 		_root->get_data_widget().flags = widget_flags::wf_pos_x_absolute | widget_flags::wf_pos_y_absolute | widget_flags::wf_size_x_absolute | widget_flags::wf_size_y_absolute;
 		_root->size_pass();
-		_root->size_pass_children();
-		_root->size_pass_post();
+		_root->size_pass_children(_reuse_fill_x, _reuse_fill_y);
+		_root->size_pass_post(_reuse_fill_x, _reuse_fill_y);
 		_root->pos_pass();
 		_root->pos_pass_children();
 		_root->pos_pass_post();
@@ -1680,16 +1720,15 @@ namespace vekt
 
 	void builder::on_mouse_move(const vec2& mouse)
 	{
-		widget* current_hovered_widget = find_widget_at(_root, mouse);
+		const vec2 delta = mouse - _mouse_position;
+		_mouse_position	 = mouse;
 
-		if (current_hovered_widget != _last_hovered)
+		for (widget* w : _press_state_history)
 		{
-			if (_last_hovered != nullptr && _last_hovered->_widget_data.on_hover_end) { _last_hovered->_widget_data.on_hover_end(_last_hovered); }
-			if (current_hovered_widget != nullptr && current_hovered_widget->_widget_data.on_hover_begin) { current_hovered_widget->_widget_data.on_hover_begin(current_hovered_widget); }
-			_last_hovered = current_hovered_widget;
+			if (w->get_data_widget().on_mouse_dragged) w->get_data_widget().on_mouse_dragged(w, mouse, delta);
 		}
 
-		// if (current_hovered_widget != nullptr && current_hovered_widget->onMouseMove) { current_hovered_widget->onMouseMove(mouseX, mouseY); }
+		pass_hover_state(_root, mouse);
 	}
 
 	input_event_result builder::on_mouse_event(const mouse_event& ev)
@@ -1705,9 +1744,34 @@ namespace vekt
 		widget* last_widget = nullptr;
 		for (const input_layer& layer : _input_layers)
 		{
-			input_event_result res = layer.root->on_event_internal(ev, input_event_phase::tunneling, last_widget);
-			if (res == input_event_result::not_handled && last_widget) res = last_widget->on_event_internal(ev, input_event_phase::bubbling, last_widget);
-			if (res == input_event_result::handled) return res;
+			if (ev.type == input_event_type::pressed)
+			{
+				widget* w = find_widget_at(layer.root, _mouse_position);
+				if (w)
+				{
+					w->_press_states[ev.button] = true;
+					_press_state_history.push_back(w);
+				}
+			}
+
+			if (ev.type == input_event_type::released)
+			{
+				widget* w = find_widget_at(layer.root, _mouse_position);
+				if (w)
+				{
+
+					if (w->_press_states[ev.button] && w->get_data_widget().on_mouse_clicked) { w->get_data_widget().on_mouse_clicked(w, ev); }
+
+					w->_press_states[ev.button] = false;
+				}
+
+				for (widget* w : _press_state_history)
+					w->_press_states[ev.button] = false;
+				_press_state_history.resize(0);
+			}
+
+			input_event_result res = layer.root->on_event_internal(ev, last_widget);
+			if (res == input_event_result::handled) { return res; }
 		}
 
 		return input_event_result::not_handled;
@@ -1726,8 +1790,7 @@ namespace vekt
 		widget* last_widget = nullptr;
 		for (const input_layer& layer : _input_layers)
 		{
-			input_event_result res = layer.root->on_event_internal(ev, input_event_phase::tunneling, last_widget);
-			if (res == input_event_result::not_handled && last_widget) res = last_widget->on_event_internal(ev, input_event_phase::bubbling, last_widget);
+			input_event_result res = layer.root->on_event_internal(ev, last_widget);
 			if (res == input_event_result::handled) return res;
 		}
 
@@ -1747,8 +1810,7 @@ namespace vekt
 		widget* last_widget = nullptr;
 		for (const input_layer& layer : _input_layers)
 		{
-			input_event_result res = layer.root->on_event_internal(ev, input_event_phase::tunneling, last_widget);
-			if (res == input_event_result::not_handled && last_widget) res = last_widget->on_event_internal(ev, input_event_phase::bubbling, last_widget);
+			input_event_result res = layer.root->on_event_internal(ev, last_widget);
 			if (res == input_event_result::handled) return res;
 		}
 
@@ -1788,44 +1850,41 @@ namespace vekt
 
 	widget* builder::find_widget_at(widget* current_widget, const vec2& mouse)
 	{
-		const bool receives_input = true;
-		if (!current_widget->get_is_visible() || !receives_input) { return nullptr; }
+		if (!current_widget->get_is_visible()) { return nullptr; }
 
-		vec4 active_clip_rect = get_current_clip();
-		if (!active_clip_rect.is_point_inside(mouse)) { return nullptr; }
+		const vec4 bounds = current_widget->get_clip_rect();
+		if (!bounds.is_point_inside(mouse)) return nullptr;
 
-		const vec4 bounds = vec4{
-			.x = current_widget->_widget_data.final_pos.x,
-			.y = current_widget->_widget_data.final_pos.y,
-			.z = current_widget->_widget_data.final_size.x,
-			.w = current_widget->_widget_data.final_size.y,
-		};
+		widget* found = nullptr;
 
-		for (unsigned int i = current_widget->_widget_data.children.size() - 1; i >= 0; --i)
+		for (widget* w : current_widget->get_data_widget().children)
 		{
-			widget* child = current_widget->_widget_data.children[i];
-
-			// We must calculate the clip environment for the child before recursing.
-			// A temporary manager or a push/pop on the existing one works.
-			// This push operation handles the intersection internally.
-			push_to_clip_stack(bounds);
-			widget* hit_widget = find_widget_at(child, mouse);
-			pop_clip_stack();
-
-			// If a child was hit, it's on top. We're done. Return it immediately.
-			if (hit_widget != nullptr) { return hit_widget; }
+			found = find_widget_at(w, mouse);
+			if (found) return found;
 		}
 
-		// 4. If no children were hit, check the parent widget itself.
-		if (bounds.is_point_inside(mouse)) { return current_widget; }
-
-		// 5. No hit.
-		return nullptr;
+		return current_widget->get_data_widget().receive_input ? current_widget : nullptr;
 	}
 
-	void builder::add_filled_rect(const gfx_filled_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data)
+	void builder::pass_hover_state(widget* w, const vec2& mouse)
+	{
+		const vec4 clip	   = w->get_clip_rect();
+		const bool hovered = clip.is_point_inside(mouse);
+
+		if (w->get_data_widget().on_hover_end && w->_is_hovered && !hovered) w->get_data_widget().on_hover_end(w);
+		if (w->get_data_widget().on_hover_begin && !w->_is_hovered && hovered) w->get_data_widget().on_hover_begin(w);
+		w->_is_hovered = hovered;
+
+		for (widget* c : w->get_data_widget().children)
+			pass_hover_state(c, mouse);
+	}
+
+	void builder::add_filled_rect(const gfx_filled_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed)
 	{
 		basic_draw_buffer* db = get_draw_buffer_basic(draw_order, user_data);
+
+		const vec4 color_start = use_pressed ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_start);
+		const vec4 color_end   = use_pressed ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_end);
 
 		_reuse_outer_path.resize(0);
 		_reuse_outline_path.resize(0);
@@ -1852,12 +1911,12 @@ namespace vekt
 		}
 
 		const unsigned int out_start = db->vertices.size();
-		add_vertices(db, _reuse_outer_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
+		add_vertices(db, _reuse_outer_path, color_start, color_end, rect.color_direction, min, max);
 
 		if (has_rounding)
 		{
 			const unsigned int central_start = db->vertices.size();
-			add_central_vertex(db, rect.color_start, rect.color_end, min, max);
+			add_central_vertex(db, color_start, color_end, min, max);
 			add_filled_rect_central(db, out_start, central_start, _reuse_outer_path.size());
 		}
 		else
@@ -1888,10 +1947,11 @@ namespace vekt
 		}
 	}
 
-	void builder::add_stroke_rect(const gfx_stroke_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data)
+	void builder::add_stroke_rect(const gfx_stroke_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed)
 	{
-		basic_draw_buffer* db = get_draw_buffer_basic(draw_order, user_data);
-
+		basic_draw_buffer* db		   = get_draw_buffer_basic(draw_order, user_data);
+		const vec4		   color_start = use_pressed ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_start);
+		const vec4		   color_end   = use_pressed ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_end);
 		_reuse_outer_path.resize(0);
 		_reuse_inner_path.resize(0);
 
@@ -1921,9 +1981,9 @@ namespace vekt
 
 		// Original stroke
 		const unsigned int out_start = db->vertices.size();
-		add_vertices(db, _reuse_outer_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
+		add_vertices(db, _reuse_outer_path, color_start, color_end, rect.color_direction, min, max);
 		const unsigned int in_start = db->vertices.size();
-		add_vertices(db, _reuse_inner_path, rect.color_start, rect.color_end, rect.color_direction, min, max);
+		add_vertices(db, _reuse_inner_path, color_start, color_end, rect.color_direction, min, max);
 		add_strip(db, out_start, in_start, _reuse_outer_path.size(), false);
 
 		if (has_aa)
@@ -1940,13 +2000,17 @@ namespace vekt
 		}
 	}
 
-	void builder::add_text(const gfx_text& text, const vec2& position, const vec2& size, unsigned int draw_order, void* user_data)
+	void builder::add_text(const gfx_text& text, const vec2& position, const vec2& size, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed)
 	{
 		if (text.target_font == nullptr)
 		{
 			V_ERR("vekt::builder::add_text() -> No font is set!");
 			return;
 		}
+
+		const vec4 color_start = use_pressed ? text.pressed_color : ((use_hovered && text.hovered_color.w > 0.001f) ? text.hovered_color : text.color_start);
+		const vec4 color_end   = use_pressed ? text.pressed_color : ((use_hovered && text.hovered_color.w > 0.001f) ? text.hovered_color : text.color_end);
+
 		text_draw_buffer* db		  = get_draw_buffer_text(draw_order, user_data);
 		const float		  pixel_scale = text.target_font->_scale;
 
@@ -1994,7 +2058,7 @@ namespace vekt
 			auto set_col = [&](vertex_text& vtx) {
 				const float x0 = math::remap(vtx.pos.x, position.x, end.x, 0.0f, 1.0f);
 				const float y0 = math::remap(vtx.pos.y, position.y, end.y, 0.0f, 1.0f);
-				vtx.color	   = text.color_direction == direction::horizontal ? vec4::lerp(text.color_start, text.color_end, x0) : vec4::lerp(text.color_start, text.color_end, y0);
+				vtx.color	   = text.color_direction == direction::horizontal ? vec4::lerp(color_start, color_end, x0) : vec4::lerp(color_start, color_end, y0);
 			};
 
 			set_col(v0);
@@ -2376,6 +2440,55 @@ namespace vekt
 
 		if (right < x || bottom < y) { return vec4(); }
 		return {x, y, right - x, bottom - y};
+	}
+
+	widget* builder::widget_horizontal_divider(float height, const vec4& color)
+	{
+		widget* w = allocate();
+		w->set_pos_x(0.0f, helper_pos_type::relative);
+		w->set_width(1.0f, helper_size_type::relative);
+		w->set_height(height, helper_size_type::absolute);
+		w->get_data_widget().debug_name = "Horizontal Divider";
+		gfx_filled_rect& rect			= w->get_gfx_filled_rect();
+		rect.color_start = rect.color_end = color;
+		return w;
+	}
+
+	widget* builder::widget_vertical_divider(float width, const vec4& color)
+	{
+		widget* w = allocate();
+		w->set_pos_y(0.0f, helper_pos_type::relative);
+		w->set_height(1.0f, helper_size_type::relative);
+		w->set_width(width, helper_size_type::absolute);
+		w->get_data_widget().debug_name = "Vertical Divider";
+
+		gfx_filled_rect& rect = w->get_gfx_filled_rect();
+		rect.color_start = rect.color_end = color;
+		return w;
+	}
+
+	widget* builder::widget_button(float height, font* fnt, const VEKT_STRING& text, const vec4& color, const vec4& text_color)
+	{
+		widget* button = allocate();
+		button->set_height(height, helper_size_type::absolute);
+		button->set_width(1.0f, helper_size_type::relative);
+		button->set_pos_x(0.0f, helper_pos_type::relative);
+		button->get_data_widget().debug_name	= "Button";
+		button->get_data_widget().receive_input = true;
+
+		gfx_filled_rect& rect = button->get_gfx_filled_rect();
+		rect.color_start = rect.color_end = color;
+
+		widget* txt = allocate();
+		txt->set_pos_x(0.5f, helper_pos_type::relative, helper_anchor_type::center);
+		txt->set_pos_y(0.5f, helper_pos_type::relative, helper_anchor_type::center);
+		gfx_text& gfx_text	 = txt->get_gfx_text();
+		gfx_text.color_start = gfx_text.color_end = text_color;
+		gfx_text.set_font(fnt);
+		gfx_text.text = text;
+
+		button->add_child(txt);
+		return button;
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
