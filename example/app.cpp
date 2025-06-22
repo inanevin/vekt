@@ -75,7 +75,7 @@ void app::init()
 	_window.init(_screen_width, _screen_height);
 	_backend.init(*_vekt_builder);
 
-	_vekt_font = vekt::font_manager::get().load_font("Roboto-Regular.ttf", 18);
+	_vekt_font = vekt::font_manager::get().load_font("Roboto-Regular.ttf", 18, true);
 
 	create_top_pane();
 	create_bottom_pane();
@@ -157,8 +157,8 @@ void app::on_mouse(int button, int action)
 		type = vekt::input_event_type::repeated;
 
 	_vekt_builder->on_mouse_event({
-		.type	  = type,
-		.button	  = button,
+		.type	= type,
+		.button = button,
 	});
 }
 
@@ -246,6 +246,18 @@ void app::create_bottom_pane()
 		button0->get_gfx_filled_rect().outline_color	 = theme::color_dark3;
 		button0->get_gfx_filled_rect().hovered_color	 = theme::color_dark3;
 		button0->get_gfx_filled_rect().pressed_color	 = theme::color_dark1;
+
+		vekt::widget* test = _vekt_builder->allocate();
+		test->set_pos_x(0.0f);
+		test->set_pos_y(0.0f);
+		test->set_width(1);
+		test->set_height(1);
+		test->get_gfx_stroke_rect().thickness	= 1;
+		test->get_gfx_stroke_rect().color_start = test->get_gfx_stroke_rect().color_end = vekt::vec4(1, 0, 0, 1);
+
+		button0->get_data_widget().children[0]->add_child(test);
+
+		 button0->get_data_widget().children[0]->get_gfx_data().user_data = &_backend.get_sdf_material();
 		bottom_left->add_child(button0);
 	}
 

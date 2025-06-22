@@ -19,6 +19,13 @@ public:
 		unsigned int								  handle = 0;
 		std::unordered_map<std::string, unsigned int> uniforms;
 	};
+
+	struct material
+	{
+		float softness	= 0.02f;
+		float thickness = 0.5f;
+	};
+
 	void init(vekt::builder& builder);
 	void uninit();
 	void start_frame();
@@ -41,6 +48,8 @@ public:
 
 	inline void	 set_debug_offset(float f, unsigned int idx) { _debug_offsets[idx] = f; }
 	inline float get_debug_offset(unsigned int idx) const { return _debug_offsets[idx]; }
+
+	inline material& get_sdf_material() { return _sdf_material; }
 
 private:
 	void create_shader(shader_data& data, const char* vert, const char* frag);
@@ -66,4 +75,6 @@ private:
 	bool		 _is_wireframe	   = false;
 	shader_data	 _basic_shader;
 	shader_data	 _text_shader;
+	shader_data	 _sdf_shader;
+	material	 _sdf_material = {};
 };

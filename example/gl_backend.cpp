@@ -92,14 +92,32 @@ void gl_backend::init(vekt::builder& builder)
 							 "fragColor = vec4(fCol.rgb, texture(diffuse, fUV).r * fCol.a);\n"
 							 "}\0";
 
+	const char* SDF_FRAG = "#version 330 core\n"
+						   "out vec4 fragColor;\n"
+						   "in vec2 fUV;\n"
+						   "in vec4 fCol;\n"
+						   "uniform sampler2D diffuse;\n"
+						   "uniform float softness; \n"
+						   "uniform float thickness; \n"
+						   "void main()\n"
+						   "{\n"
+						   "float distance = texture(diffuse, fUV).r;\n"
+						   "float alpha = smoothstep(thickness - softness, thickness + softness, distance);\n"
+						   "fragColor = vec4(fCol.rgb, alpha);\n"
+						   "}\0";
+
 	create_shader(_basic_shader, BASIC_VERT, BASIC_FRAG);
 	create_shader(_text_shader, BASIC_VERT, TEXT_FRAG);
+	create_shader(_sdf_shader, BASIC_VERT, SDF_FRAG);
 
 	builder.set_on_draw_basic(std::bind(&gl_backend::draw_basic, this, std::placeholders::_1));
 	builder.set_on_draw_text(std::bind(&gl_backend::draw_text, this, std::placeholders::_1));
 	vekt::font_manager::get().set_atlas_created_callback(std::bind(&gl_backend::atlas_created, this, std::placeholders::_1));
 	vekt::font_manager::get().set_atlas_updated_callback(std::bind(&gl_backend::atlas_updated, this, std::placeholders::_1));
 	vekt::font_manager::get().set_atlas_destroyed_callback(std::bind(&gl_backend::atlas_destroyed, this, std::placeholders::_1));
+
+	_sdf_material.thickness = 0.4f;
+	_sdf_material.softness = 0.1f;
 }
 
 void gl_backend::uninit()
@@ -288,10 +306,16 @@ void gl_backend::draw_text(const vekt::text_draw_buffer& db)
 
 	set_scissors(db.clip.x, db.clip.y, db.clip.z, db.clip.w);
 
-	shader_data& data = _text_shader;
+	shader_data& data = db.user_data == nullptr ? _text_shader : _sdf_shader;
 
 	glUseProgram(data.handle);
 	glUniformMatrix4fv(data.uniforms["proj"], 1, GL_FALSE, &_proj[0][0]);
+
+	if (db.user_data)
+	{
+		glUniform1f(data.uniforms["thickness"], _sdf_material.thickness);
+		glUniform1f(data.uniforms["softness"], _sdf_material.softness);
+	}
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, _font_texture);

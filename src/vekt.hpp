@@ -797,7 +797,7 @@ namespace vekt
 		void remove_child(widget* w);
 		void set_visible(bool is_visible, bool recursive);
 
-		inline void set_pos_x(float x, helper_pos_type type, helper_anchor_type anchor = helper_anchor_type::start)
+		inline void set_pos_x(float x, helper_pos_type type = helper_pos_type::relative, helper_anchor_type anchor = helper_anchor_type::start)
 		{
 			_widget_data.pos.x = x;
 			_widget_data.flags &= ~(widget_flags::wf_pos_x_relative | widget_flags::wf_pos_x_absolute | widget_flags::wf_pos_anchor_x_center | widget_flags::wf_pos_anchor_x_end);
@@ -827,7 +827,7 @@ namespace vekt
 			}
 		}
 
-		inline void set_pos_y(float y, helper_pos_type type, helper_anchor_type anchor = helper_anchor_type::start)
+		inline void set_pos_y(float y, helper_pos_type type = helper_pos_type::relative, helper_anchor_type anchor = helper_anchor_type::start)
 		{
 			_widget_data.pos.y = y;
 			_widget_data.flags &= ~(widget_flags::wf_pos_y_relative | widget_flags::wf_pos_y_absolute | widget_flags::wf_pos_anchor_y_center | widget_flags::wf_pos_anchor_y_end);
@@ -857,7 +857,7 @@ namespace vekt
 			}
 		}
 
-		inline void set_width(float width, helper_size_type type)
+		inline void set_width(float width, helper_size_type type = helper_size_type::relative)
 		{
 			_widget_data.size.x = width;
 			_widget_data.flags &= ~(widget_flags::wf_size_x_absolute | widget_flags::wf_size_x_relative | widget_flags::wf_size_x_fill | widget_flags::wf_size_x_copy_y | widget_flags::wf_size_x_max_children | widget_flags::wf_size_x_total_children);
@@ -887,7 +887,7 @@ namespace vekt
 			}
 		}
 
-		inline void set_height(float height, helper_size_type type)
+		inline void set_height(float height, helper_size_type type = helper_size_type::relative)
 		{
 			_widget_data.size.y = height;
 			_widget_data.flags &= ~(widget_flags::wf_size_y_absolute | widget_flags::wf_size_y_relative | widget_flags::wf_size_y_fill | widget_flags::wf_size_y_copy_x | widget_flags::wf_size_y_max_children | widget_flags::wf_size_y_total_children);
@@ -1237,19 +1237,20 @@ namespace vekt
 
 	struct glyph
 	{
-		int	  kern_advance[128] = {0};
-		int	  width				= 0;
-		int	  height			= 0;
-		int	  advance_x			= 0;
-		int	  left_bearing		= 0;
-		float x_offset			= 0.0f;
-		float y_offset			= 0.0f;
-		int	  atlas_x			= 0;
-		int	  atlas_y			= 0;
-		float uv_x				= 0.0f;
-		float uv_y				= 0.0f;
-		float uv_w				= 0.0f;
-		float uv_h				= 0.0f;
+		unsigned char* sdf_data			 = nullptr;
+		int			   kern_advance[128] = {0};
+		int			   width			 = 0;
+		int			   height			 = 0;
+		int			   advance_x		 = 0;
+		int			   left_bearing		 = 0;
+		float		   x_offset			 = 0.0f;
+		float		   y_offset			 = 0.0f;
+		int			   atlas_x			 = 0;
+		int			   atlas_y			 = 0;
+		float		   uv_x				 = 0.0f;
+		float		   uv_y				 = 0.0f;
+		float		   uv_w				 = 0.0f;
+		float		   uv_h				 = 0.0f;
 	};
 
 	struct font
@@ -1263,6 +1264,8 @@ namespace vekt
 		int			 descent				= 0;
 		int			 line_gap				= 0;
 		unsigned int size					= 0;
+
+		~font();
 	};
 
 	class atlas
@@ -1301,7 +1304,11 @@ namespace vekt
 	{
 	public:
 		font_manager() {};
-		~font_manager() { ASSERT(_atlases.empty()); };
+		~font_manager()
+		{
+			ASSERT(_atlases.empty());
+			ASSERT(_fonts.empty());
+		};
 
 		static inline font_manager& get()
 		{
@@ -1309,7 +1316,7 @@ namespace vekt
 			return fm;
 		}
 
-		font* load_font(const char* file, unsigned int size);
+		font* load_font(const char* file, unsigned int size, bool is_sdf = false, int sdf_padding = 3, int sdf_edge = 128, float sdf_distance = 32.0f);
 		void  unload_font(font* fnt);
 
 		inline void init() {};
@@ -2121,25 +2128,34 @@ namespace vekt
 			return vec2();
 		}
 
-		const float pixel_scale = text.target_font->_scale;
+		const font* fnt	  = text.target_font;
+		const float scale = fnt->_scale;
 
 		float total_x = 0.0f;
 		float max_y	  = 0.0f;
 
-		auto calc = [&](const glyph& g, unsigned long c, bool is_last) {
-			total_x += g.width + (static_cast<float>(!is_last) * g.advance_x * pixel_scale) + static_cast<float>(text.spacing);
-			max_y = math::max(max_y, static_cast<float>(g.height));
-		};
-
-		const uint8_t* c;
-		for (c = (uint8_t*)text.text.c_str(); *c; c++)
+		const char* str = text.text.c_str();
+		for (size_t i = 0; str[i]; ++i)
 		{
-			auto character = *c;
-			auto ch		   = text.target_font->glyph_info[character];
-			calc(ch, character, (*(c + 1) == '\0'));
+			const uint8_t c0 = static_cast<uint8_t>(str[i]);
+			const glyph&  g0 = fnt->glyph_info[c0];
+
+			// Apply horizontal advance (in unscaled font units, so multiply by scale)
+			total_x += g0.advance_x * scale;
+
+			// Apply kerning if next char exists
+			if (str[i + 1])
+			{
+				const uint8_t c1 = static_cast<uint8_t>(str[i + 1]);
+				total_x += g0.kern_advance[c1] * scale;
+			}
+
+			// Optional: Apply custom spacing between glyphs
+			total_x += static_cast<float>(text.spacing);
+			max_y = math::max(max_y, static_cast<float>(g0.height));
 		}
 
-		return {total_x - text.spacing, max_y};
+		return vec2(total_x - text.spacing, max_y); // remove last spacing
 	}
 
 	void builder::add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size, bool add_ccw)
@@ -2572,7 +2588,7 @@ namespace vekt
 		ASSERT(ok);
 	}
 
-	font* font_manager::load_font(const char* filename, unsigned int size)
+	font* font_manager::load_font(const char* filename, unsigned int size, bool is_sdf, int sdf_padding, int sdf_edge, float sdf_distance)
 	{
 		std::ifstream file(filename, std::ios::binary | std::ios::ate);
 		if (!file.is_open())
@@ -2607,19 +2623,27 @@ namespace vekt
 
 		for (int i = 0; i < 128; i++)
 		{
-			int ix0 = 0, iy0 = 0, ix1 = 0, iy1 = 0;
-			stbtt_GetCodepointBitmapBox(&stb_font, i, fnt->_scale, fnt->_scale, &ix0, &iy0, &ix1, &iy1);
-
 			glyph& glyph_info = fnt->glyph_info[i];
 
-			glyph_info.width	= ix1 - ix0;
-			glyph_info.height	= iy1 - iy0;
-			glyph_info.x_offset = static_cast<float>(ix0);
-			glyph_info.y_offset = static_cast<float>(iy0);
+			if (is_sdf)
+			{
+				int x_off, y_off;
+				glyph_info.sdf_data = stbtt_GetCodepointSDF(&stb_font, fnt->_scale, i, sdf_padding, sdf_edge, sdf_distance, &glyph_info.width, &glyph_info.height, &x_off, &y_off);
+				glyph_info.x_offset = static_cast<float>(x_off);
+				glyph_info.y_offset = static_cast<float>(y_off);
+			}
+			else
+			{
+				int ix0 = 0, iy0 = 0, ix1 = 0, iy1 = 0;
+				stbtt_GetCodepointBitmapBox(&stb_font, i, fnt->_scale, fnt->_scale, &ix0, &iy0, &ix1, &iy1);
+				glyph_info.width	= ix1 - ix0;
+				glyph_info.height	= iy1 - iy0;
+				glyph_info.x_offset = static_cast<float>(ix0);
+				glyph_info.y_offset = static_cast<float>(iy0);
+			}
 
 			if (glyph_info.width >= 1) total_width += glyph_info.width + x_padding;
 			max_height = static_cast<int>(math::max(max_height, glyph_info.height));
-
 			stbtt_GetCodepointHMetrics(&stb_font, i, &glyph_info.advance_x, &glyph_info.left_bearing);
 
 			for (int j = 0; j < 128; j++)
@@ -2654,33 +2678,46 @@ namespace vekt
 				continue;
 			}
 
-			if (current_atlas_pen_x + glyph_info.width > static_cast<int>(config.atlas_width))
+			const int w = glyph_info.width;
+			const int h = glyph_info.height;
+			if (current_atlas_pen_x + w > static_cast<int>(config.atlas_width))
 			{
 				current_atlas_pen_x = 0;
 				current_atlas_pen_y += max_height;
 			}
 
-			if (current_atlas_pen_y + glyph_info.height > static_cast<int>(fnt->_atlas_required_height)) { ASSERT(false); }
+			if (current_atlas_pen_y + h > static_cast<int>(fnt->_atlas_required_height)) { ASSERT(false); }
 
 			glyph_info.atlas_x = current_atlas_pen_x;
 			glyph_info.atlas_y = fnt->_atlas_pos + current_atlas_pen_y;
 			glyph_info.uv_x	   = static_cast<float>(glyph_info.atlas_x) / static_cast<float>(fnt->_atlas->get_width());
 			glyph_info.uv_y	   = static_cast<float>(glyph_info.atlas_y) / static_cast<float>(fnt->_atlas->get_height());
-			glyph_info.uv_w	   = static_cast<float>(glyph_info.width) / static_cast<float>(fnt->_atlas->get_width());
-			glyph_info.uv_h	   = static_cast<float>(glyph_info.height) / static_cast<float>(fnt->_atlas->get_height());
+			glyph_info.uv_w	   = static_cast<float>(w) / static_cast<float>(fnt->_atlas->get_width());
+			glyph_info.uv_h	   = static_cast<float>(h) / static_cast<float>(fnt->_atlas->get_height());
 
 			unsigned char* dest_pixel_ptr = fnt->_atlas->get_data() + (glyph_info.atlas_y * fnt->_atlas->get_width()) + glyph_info.atlas_x;
 
-			stbtt_MakeCodepointBitmap(&stb_font,
-									  dest_pixel_ptr,
-									  glyph_info.width,			// Output bitmap width
-									  glyph_info.height,		// Output bitmap height
-									  fnt->_atlas->get_width(), // Atlas stride/pitch
-									  fnt->_scale,				// Horizontal scale
-									  fnt->_scale,				// Vertical scale
-									  i);						// Codepoint
+			if (is_sdf)
+			{
+				int atlas_stride = fnt->_atlas->get_width(); // assuming 1 byte per pixel
+				for (int row = 0; row < h; ++row)
+				{
+					std::memcpy(dest_pixel_ptr + row * atlas_stride, glyph_info.sdf_data + row * w, w);
+				}
+			}
+			else
+			{
+				stbtt_MakeCodepointBitmap(&stb_font,
+										  dest_pixel_ptr,
+										  glyph_info.width,			// Output bitmap width
+										  glyph_info.height,		// Output bitmap height
+										  fnt->_atlas->get_width(), // Atlas stride/pitch
+										  fnt->_scale,				// Horizontal scale
+										  fnt->_scale,				// Vertical scale
+										  i);						// Codepoint
+			}
 
-			current_atlas_pen_x += glyph_info.width + x_padding;
+			current_atlas_pen_x += w + x_padding;
 		}
 
 		if (_atlas_updated_cb) _atlas_updated_cb(fnt->_atlas);
@@ -2702,6 +2739,16 @@ namespace vekt
 
 		_fonts.remove(fnt);
 		delete fnt;
+	}
+
+	font::~font()
+	{
+		for (unsigned int i = 0; i < 128; i++)
+		{
+			glyph& g = glyph_info[i];
+
+			if (g.sdf_data) stbtt_FreeSDF(g.sdf_data, nullptr);
+		}
 	}
 }
 
