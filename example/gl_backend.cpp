@@ -110,14 +110,13 @@ void gl_backend::init(vekt::builder& builder)
 	create_shader(_text_shader, BASIC_VERT, TEXT_FRAG);
 	create_shader(_sdf_shader, BASIC_VERT, SDF_FRAG);
 
-	builder.set_on_draw_basic(std::bind(&gl_backend::draw_basic, this, std::placeholders::_1));
-	builder.set_on_draw_text(std::bind(&gl_backend::draw_text, this, std::placeholders::_1));
+	builder.set_on_draw(std::bind(&gl_backend::draw_basic, this, std::placeholders::_1));
 	vekt::font_manager::get().set_atlas_created_callback(std::bind(&gl_backend::atlas_created, this, std::placeholders::_1));
 	vekt::font_manager::get().set_atlas_updated_callback(std::bind(&gl_backend::atlas_updated, this, std::placeholders::_1));
 	vekt::font_manager::get().set_atlas_destroyed_callback(std::bind(&gl_backend::atlas_destroyed, this, std::placeholders::_1));
 
 	_sdf_material.thickness = 0.4f;
-	_sdf_material.softness = 0.1f;
+	_sdf_material.softness	= 0.01f;
 }
 
 void gl_backend::uninit()
@@ -277,7 +276,7 @@ void gl_backend::set_scissors(float x, float y, float w, float h)
 
 void gl_backend::create_font_texture(unsigned int width, unsigned int height) {}
 
-void gl_backend::draw_basic(const vekt::basic_draw_buffer& db)
+void gl_backend::draw_basic(const vekt::draw_buffer& db)
 {
 	if (_skipped_draw) return;
 
@@ -285,49 +284,36 @@ void gl_backend::draw_basic(const vekt::basic_draw_buffer& db)
 	glGetBooleanv(GL_SCISSOR_TEST, &is_scissor_test_enabled);
 	set_scissors(db.clip.x, db.clip.y, db.clip.z, db.clip.w);
 
-	shader_data& data = _basic_shader;
-
-	glUseProgram(data.handle);
-	glUniformMatrix4fv(data.uniforms["proj"], 1, GL_FALSE, &_proj[0][0]);
-
-	glBindBuffer(GL_ARRAY_BUFFER, _vbo);
-	glBufferData(GL_ARRAY_BUFFER, db.vertices.size() * sizeof(vekt::vertex_basic), (const GLvoid*)db.vertices.begin(), GL_STREAM_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, db.indices.size() * sizeof(vekt::index), (const GLvoid*)db.indices.begin(), GL_STREAM_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glDrawElements(GL_TRIANGLES, (GLsizei)db.indices.size(), sizeof(vekt::index) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, 0);
-}
-
-void gl_backend::draw_text(const vekt::text_draw_buffer& db)
-{
-	if (_skipped_draw) return;
-
-	set_scissors(db.clip.x, db.clip.y, db.clip.z, db.clip.w);
-
-	shader_data& data = db.user_data == nullptr ? _text_shader : _sdf_shader;
-
-	glUseProgram(data.handle);
-	glUniformMatrix4fv(data.uniforms["proj"], 1, GL_FALSE, &_proj[0][0]);
-
-	if (db.user_data)
+	if (db.used_font != nullptr)
 	{
-		glUniform1f(data.uniforms["thickness"], _sdf_material.thickness);
-		glUniform1f(data.uniforms["softness"], _sdf_material.softness);
+		shader_data& data = db.user_data == nullptr ? _text_shader : _sdf_shader;
+		glUseProgram(data.handle);
+		glUniformMatrix4fv(data.uniforms["proj"], 1, GL_FALSE, &_proj[0][0]);
+
+		if (db.user_data)
+		{
+			glUniform1f(data.uniforms["thickness"], _sdf_material.thickness);
+			glUniform1f(data.uniforms["softness"], _sdf_material.softness);
+		}
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, _font_texture);
+	}
+	else
+	{
+		shader_data& data = _basic_shader;
+		glUseProgram(data.handle);
+		glUniformMatrix4fv(data.uniforms["proj"], 1, GL_FALSE, &_proj[0][0]);
 	}
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, _font_texture);
-
 	glBindBuffer(GL_ARRAY_BUFFER, _vbo);
-	glBufferData(GL_ARRAY_BUFFER, db.vertices.size() * sizeof(vekt::vertex_basic), (const GLvoid*)db.vertices.begin(), GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, db.vertex_count * sizeof(vekt::vertex), (const GLvoid*)db.vertex_start, GL_STREAM_DRAW);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, db.indices.size() * sizeof(vekt::index), (const GLvoid*)db.indices.begin(), GL_STREAM_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, db.index_count * sizeof(vekt::index), (const GLvoid*)db.index_start, GL_STREAM_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glDrawElements(GL_TRIANGLES, (GLsizei)db.indices.size(), sizeof(vekt::index) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, (GLsizei)db.index_count, sizeof(vekt::index) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, 0);
 }
 
 void gl_backend::atlas_created(vekt::atlas* atlas)

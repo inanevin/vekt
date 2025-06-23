@@ -40,29 +40,23 @@ public:
 void app::init()
 {
 	vekt::config.on_log = [](vekt::log_verbosity verb, const char* log...) {
-		char buffer[1024];
-
+		char	buffer[1024];
 		va_list args;
-
 		va_start(args, log);
-
 		int written_chars = vsnprintf(buffer, sizeof(buffer), log, args);
-
 		va_end(args);
-
-		// Handle potential truncation (optional but good practice)
 		if (written_chars >= sizeof(buffer) || written_chars < 0) { std::cerr << "Log message truncated or error: "; }
-
-		// Output the formatted string to std::cerr
 		std::cerr << buffer << std::endl;
 	};
-	vekt::font_manager::get().init();
 
 	s_app		  = this;
 	_vekt_builder = new vekt::builder();
 
 	_vekt_builder->init({
 		.widget_buffer_sz = 1024 * 1024,
+		.vertex_buffer_sz = 1024 * 1024,
+		.index_buffer_sz  = 1024 * 1024,
+		.buffer_count	  = 50,
 	});
 
 	_vekt_root								 = _vekt_builder->allocate();
@@ -75,7 +69,8 @@ void app::init()
 	_window.init(_screen_width, _screen_height);
 	_backend.init(*_vekt_builder);
 
-	_vekt_font = vekt::font_manager::get().load_font("Roboto-Regular.ttf", 18, true);
+	vekt::font_manager::get().init();
+	_vekt_font = vekt::font_manager::get().load_font("Roboto-Regular.ttf", 18, 0, 128);
 
 	create_top_pane();
 	create_bottom_pane();
@@ -83,7 +78,7 @@ void app::init()
 
 void app::uninit()
 {
-	vekt::font_manager::get().unload_font(_vekt_font);
+	// vekt::font_manager::get().unload_font(_vekt_font);
 	vekt::font_manager::get().uninit();
 
 	_backend.uninit();
@@ -222,6 +217,7 @@ void app::create_bottom_pane()
 			pane->get_data_widget().margins.right	  = theme::margin_horizontal;
 			pane->get_data_widget().margins.top		  = theme::margin_horizontal;
 			pane->get_data_widget().margins.bottom	  = theme::margin_horizontal;
+			pane->get_data_widget().spacing			  = theme::margin_horizontal;
 			pane->get_data_widget().child_positioning = vekt::child_positioning::column;
 			pane->get_data_widget().debug_name		  = name;
 
@@ -246,19 +242,12 @@ void app::create_bottom_pane()
 		button0->get_gfx_filled_rect().outline_color	 = theme::color_dark3;
 		button0->get_gfx_filled_rect().hovered_color	 = theme::color_dark3;
 		button0->get_gfx_filled_rect().pressed_color	 = theme::color_dark1;
-
-		vekt::widget* test = _vekt_builder->allocate();
-		test->set_pos_x(0.0f);
-		test->set_pos_y(0.0f);
-		test->set_width(1);
-		test->set_height(1);
-		test->get_gfx_stroke_rect().thickness	= 1;
-		test->get_gfx_stroke_rect().color_start = test->get_gfx_stroke_rect().color_end = vekt::vec4(1, 0, 0, 1);
-
-		button0->get_data_widget().children[0]->add_child(test);
-
-		 button0->get_data_widget().children[0]->get_gfx_data().user_data = &_backend.get_sdf_material();
 		bottom_left->add_child(button0);
+
+		vekt::widget* check							   = _vekt_builder->widget_checkbox(theme::item_height, &_backend.get_sdf_material(), theme::color_dark2, theme::color_light0);
+		check->get_gfx_filled_rect().outline_thickness = theme::outline_thickness;
+		check->get_gfx_filled_rect().outline_color	   = theme::color_dark3;
+		bottom_left->add_child(check);
 	}
 
 	vekt::widget* bottom_center = create_pane(true, "BottomCenter");

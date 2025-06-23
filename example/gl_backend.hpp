@@ -5,7 +5,7 @@
 
 namespace vekt
 {
-	struct basic_draw_buffer;
+	struct draw_buffer;
 	struct text_draw_buffer;
 	class builder;
 	class atlas;
@@ -55,8 +55,7 @@ private:
 	void create_shader(shader_data& data, const char* vert, const char* frag);
 	void set_scissors(float x, float y, float w, float h);
 	void create_font_texture(unsigned int width, unsigned int height);
-	void draw_basic(const vekt::basic_draw_buffer& db);
-	void draw_text(const vekt::text_draw_buffer& db);
+	void draw_basic(const vekt::draw_buffer& db);
 	void atlas_created(vekt::atlas* atlas);
 	void atlas_updated(vekt::atlas* atlas);
 	void atlas_destroyed(vekt::atlas* atlas);

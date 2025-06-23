@@ -24,6 +24,59 @@
 
 namespace vekt
 {
+	////////////////////////////////////////////////////////////////////////////////
+	// :: FONTS
+	////////////////////////////////////////////////////////////////////////////////
+
+	static constexpr unsigned char __icons_ttf[] = {
+		0x00, 0x01, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x80, 0x00, 0x03, 0x00, 0x50, 0x46, 0x46, 0x54, 0x4d, 0xa8, 0xa5, 0xc0, 0x59, 0x00, 0x00, 0x07, 0x94, 0x00, 0x00, 0x00, 0x1c, 0x47, 0x44, 0x45, 0x46, 0x00, 0x27, 0x00, 0x0e, 0x00, 0x00, 0x07, 0x74, 0x00, 0x00,
+		0x00, 0x1e, 0x4f, 0x53, 0x2f, 0x32, 0x55, 0xe5, 0x62, 0x2c, 0x00, 0x00, 0x01, 0x58, 0x00, 0x00, 0x00, 0x56, 0x63, 0x6d, 0x61, 0x70, 0x05, 0x28, 0x0d, 0xfa, 0x00, 0x00, 0x01, 0xd0, 0x00, 0x00, 0x01, 0x52, 0x67, 0x61, 0x73, 0x70, 0xff, 0xff, 0x00, 0x03,
+		0x00, 0x00, 0x07, 0x6c, 0x00, 0x00, 0x00, 0x08, 0x67, 0x6c, 0x79, 0x66, 0x2f, 0x77, 0x44, 0x4a, 0x00, 0x00, 0x03, 0x38, 0x00, 0x00, 0x01, 0xc8, 0x68, 0x65, 0x61, 0x64, 0x2c, 0x29, 0x39, 0xf4, 0x00, 0x00, 0x00, 0xdc, 0x00, 0x00, 0x00, 0x36, 0x68, 0x68,
+		0x65, 0x61, 0x07, 0xf9, 0x04, 0xcd, 0x00, 0x00, 0x01, 0x14, 0x00, 0x00, 0x00, 0x24, 0x68, 0x6d, 0x74, 0x78, 0x1e, 0x08, 0x03, 0x10, 0x00, 0x00, 0x01, 0xb0, 0x00, 0x00, 0x00, 0x20, 0x6c, 0x6f, 0x63, 0x61, 0x01, 0xac, 0x01, 0x36, 0x00, 0x00, 0x03, 0x24,
+		0x00, 0x00, 0x00, 0x12, 0x6d, 0x61, 0x78, 0x70, 0x00, 0x4c, 0x00, 0x33, 0x00, 0x00, 0x01, 0x38, 0x00, 0x00, 0x00, 0x20, 0x6e, 0x61, 0x6d, 0x65, 0xc8, 0xc7, 0x9a, 0x50, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x02, 0x2e, 0x70, 0x6f, 0x73, 0x74, 0x9e, 0xd1,
+		0x38, 0xb1, 0x00, 0x00, 0x07, 0x30, 0x00, 0x00, 0x00, 0x3a, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0xd2, 0x92, 0x52, 0x08, 0x5f, 0x0f, 0x3c, 0xf5, 0x00, 0x0b, 0x03, 0xe8, 0x00, 0x00, 0x00, 0x00, 0xe4, 0x51, 0x11, 0xc1, 0x00, 0x00, 0x00, 0x00,
+		0xe4, 0x7d, 0xe3, 0x66, 0x00, 0x3f, 0x00, 0x47, 0x03, 0xfd, 0x03, 0xa1, 0x00, 0x00, 0x00, 0x08, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0xa1, 0x00, 0x00, 0x00, 0x5a, 0x04, 0xc4, 0x00, 0x00, 0x00, 0x00, 0x03, 0xfd,
+		0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08, 0x00, 0x30, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+		0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x03, 0xb4, 0x01, 0x90, 0x00, 0x05, 0x00, 0x00, 0x02, 0x8a, 0x02, 0xbc, 0x00, 0x00, 0x00, 0x8c, 0x02, 0x8a, 0x02, 0xbc, 0x00, 0x00, 0x01, 0xe0, 0x00, 0x31, 0x01, 0x02, 0x00, 0x00, 0x02, 0x00,
+		0x05, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x66, 0x45, 0x64, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x24, 0x03, 0xe8, 0x00, 0x00, 0x00, 0x5a, 0x03, 0xa1,
+		0xff, 0xb9, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xe8, 0x00, 0x00, 0x03, 0xe8, 0x00, 0x00, 0x00, 0xfa, 0x00, 0x00, 0x03, 0xe8, 0x00, 0x47, 0x03, 0xe8, 0x00, 0x49, 0x04, 0xc4, 0x00, 0xc7, 0x04, 0xc2, 0x01, 0x7a, 0x03, 0xe8,
+		0x00, 0x3f, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x1c, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4c, 0x00, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1c, 0x00, 0x04, 0x00, 0x30, 0x00, 0x00, 0x00, 0x08, 0x00, 0x08, 0x00, 0x02,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x24, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x20, 0xff, 0xff, 0x00, 0x01, 0xff, 0xf5, 0xff, 0xe3, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x06, 0x00, 0x00,
+		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x03, 0x04, 0x05, 0x06, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2e, 0x00, 0x7a, 0x00, 0x9a, 0x00, 0xbc, 0x00, 0xe4, 0x00, 0x00, 0x00, 0x01, 0x00, 0x47, 0x00, 0x47, 0x03, 0xa1, 0x03, 0xa1, 0x00, 0x1c, 0x00, 0x00, 0x01, 0x14,
+		0x07, 0x06, 0x07, 0x06, 0x23, 0x22, 0x27, 0x26, 0x27, 0x26, 0x27, 0x3c, 0x01, 0x26, 0x35, 0x34, 0x37, 0x3e, 0x01, 0x33, 0x32, 0x17, 0x16, 0x17, 0x16, 0x15, 0x14, 0x03, 0xa0, 0x39, 0x39, 0x63, 0x62, 0x75, 0x74, 0x64, 0x63, 0x38, 0x36, 0x03, 0x01, 0x3b,
+		0x3c, 0xbc, 0x7a, 0x7b, 0x5c, 0x5e, 0x3b, 0x3d, 0x01, 0xf4, 0x76, 0x61, 0x61, 0x3b, 0x3a, 0x3a, 0x3a, 0x62, 0x5f, 0x40, 0x12, 0x1f, 0x11, 0x01, 0x6e, 0x61, 0x5f, 0x74, 0x3a, 0x3b, 0x5c, 0x5e, 0x6a, 0x0d, 0x00, 0x02, 0x00, 0x49, 0x00, 0x47, 0x03, 0x9f,
+		0x03, 0xa1, 0x00, 0x17, 0x00, 0x2f, 0x00, 0x00, 0x01, 0x22, 0x07, 0x06, 0x07, 0x06, 0x15, 0x14, 0x17, 0x16, 0x17, 0x16, 0x33, 0x32, 0x37, 0x36, 0x37, 0x36, 0x35, 0x34, 0x27, 0x26, 0x27, 0x26, 0x01, 0x14, 0x07, 0x06, 0x07, 0x06, 0x23, 0x22, 0x27, 0x26,
+		0x27, 0x26, 0x35, 0x34, 0x37, 0x36, 0x37, 0x36, 0x33, 0x32, 0x17, 0x16, 0x17, 0x16, 0x01, 0xf4, 0x52, 0x47, 0x45, 0x29, 0x28, 0x29, 0x28, 0x45, 0x44, 0x55, 0x54, 0x44, 0x42, 0x2c, 0x2b, 0x29, 0x28, 0x48, 0x47, 0x01, 0x5a, 0x39, 0x37, 0x64, 0x62, 0x75,
+		0x74, 0x64, 0x62, 0x3a, 0x37, 0x3b, 0x39, 0x5f, 0x5e, 0x7a, 0x7b, 0x5c, 0x5d, 0x3c, 0x3b, 0x03, 0x24, 0x29, 0x28, 0x47, 0x46, 0x52, 0x51, 0x47, 0x46, 0x29, 0x29, 0x29, 0x28, 0x47, 0x46, 0x52, 0x51, 0x47, 0x46, 0x29, 0x29, 0xfe, 0xce, 0x74, 0x61, 0x61,
+		0x3b, 0x3a, 0x3a, 0x39, 0x63, 0x63, 0x74, 0x77, 0x60, 0x61, 0x3b, 0x3a, 0x3a, 0x3b, 0x61, 0x62, 0x00, 0x00, 0x00, 0x01, 0x00, 0xc7, 0x00, 0xfa, 0x03, 0xfd, 0x02, 0xca, 0x00, 0x0f, 0x00, 0x00, 0x01, 0x14, 0x07, 0x01, 0x06, 0x22, 0x27, 0x01, 0x26, 0x34,
+		0x36, 0x33, 0x21, 0x32, 0x16, 0x15, 0x03, 0xfd, 0x0e, 0xfe, 0x98, 0x10, 0x28, 0x10, 0xfe, 0x98, 0x10, 0x20, 0x14, 0x02, 0xd0, 0x14, 0x1e, 0x02, 0x96, 0x13, 0x11, 0xfe, 0x98, 0x10, 0x10, 0x01, 0x68, 0x10, 0x28, 0x20, 0x1e, 0x13, 0x00, 0x00, 0x00, 0x01,
+		0x01, 0x7a, 0x00, 0x58, 0x03, 0x48, 0x03, 0x90, 0x00, 0x11, 0x00, 0x00, 0x01, 0x16, 0x15, 0x14, 0x07, 0x01, 0x06, 0x22, 0x26, 0x35, 0x11, 0x34, 0x36, 0x37, 0x36, 0x33, 0x32, 0x17, 0x03, 0x3a, 0x0e, 0x0e, 0xfe, 0x98, 0x10, 0x28, 0x20, 0x20, 0x0a, 0x08,
+		0x05, 0x12, 0x0f, 0x02, 0x18, 0x0e, 0x16, 0x13, 0x11, 0xfe, 0x98, 0x10, 0x20, 0x14, 0x02, 0xd0, 0x17, 0x1a, 0x02, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x3f, 0x00, 0xbb, 0x03, 0xaa, 0x03, 0x2d, 0x00, 0x15, 0x00, 0x00, 0x01, 0x16, 0x14, 0x07,
+		0x01, 0x06, 0x23, 0x22, 0x2f, 0x01, 0x26, 0x34, 0x36, 0x33, 0x37, 0x32, 0x1f, 0x01, 0x01, 0x36, 0x33, 0x32, 0x03, 0x98, 0x12, 0x12, 0xfe, 0x0c, 0x13, 0x19, 0x1a, 0x13, 0xfa, 0x12, 0x24, 0x0d, 0x0e, 0x19, 0x13, 0xce, 0x01, 0xc7, 0x13, 0x1a, 0x19, 0x03,
+		0x1a, 0x12, 0x34, 0x12, 0xfe, 0x0c, 0x13, 0x13, 0xfa, 0x12, 0x34, 0x24, 0x01, 0x13, 0xcd, 0x01, 0xc7, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x96, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x0f, 0x00, 0x20, 0x00, 0x01, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x02, 0x00, 0x07, 0x00, 0x40, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x33, 0x00, 0xb0, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x17, 0x01, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x0b,
+		0x01, 0x44, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x17, 0x01, 0x80, 0x00, 0x03, 0x00, 0x01, 0x04, 0x09, 0x00, 0x01, 0x00, 0x1e, 0x00, 0x00, 0x00, 0x03, 0x00, 0x01, 0x04, 0x09, 0x00, 0x02, 0x00, 0x0e, 0x00, 0x30, 0x00, 0x03, 0x00, 0x01,
+		0x04, 0x09, 0x00, 0x03, 0x00, 0x66, 0x00, 0x48, 0x00, 0x03, 0x00, 0x01, 0x04, 0x09, 0x00, 0x04, 0x00, 0x2e, 0x00, 0xe4, 0x00, 0x03, 0x00, 0x01, 0x04, 0x09, 0x00, 0x05, 0x00, 0x16, 0x01, 0x2c, 0x00, 0x03, 0x00, 0x01, 0x04, 0x09, 0x00, 0x06, 0x00, 0x2e,
+		0x01, 0x50, 0x00, 0x4c, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x61, 0x00, 0x45, 0x00, 0x64, 0x00, 0x69, 0x00, 0x74, 0x00, 0x6f, 0x00, 0x72, 0x00, 0x49, 0x00, 0x63, 0x00, 0x6f, 0x00, 0x6e, 0x00, 0x73, 0x00, 0x00, 0x4c, 0x69, 0x6e, 0x61, 0x45, 0x64, 0x69, 0x74,
+		0x6f, 0x72, 0x49, 0x63, 0x6f, 0x6e, 0x73, 0x00, 0x00, 0x52, 0x00, 0x65, 0x00, 0x67, 0x00, 0x75, 0x00, 0x6c, 0x00, 0x61, 0x00, 0x72, 0x00, 0x00, 0x52, 0x65, 0x67, 0x75, 0x6c, 0x61, 0x72, 0x00, 0x00, 0x46, 0x00, 0x6f, 0x00, 0x6e, 0x00, 0x74, 0x00, 0x46,
+		0x00, 0x6f, 0x00, 0x72, 0x00, 0x67, 0x00, 0x65, 0x00, 0x20, 0x00, 0x32, 0x00, 0x2e, 0x00, 0x30, 0x00, 0x20, 0x00, 0x3a, 0x00, 0x20, 0x00, 0x4c, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x61, 0x00, 0x45, 0x00, 0x64, 0x00, 0x69, 0x00, 0x74, 0x00, 0x6f, 0x00, 0x72,
+		0x00, 0x49, 0x00, 0x63, 0x00, 0x6f, 0x00, 0x6e, 0x00, 0x73, 0x00, 0x20, 0x00, 0x52, 0x00, 0x65, 0x00, 0x67, 0x00, 0x75, 0x00, 0x6c, 0x00, 0x61, 0x00, 0x72, 0x00, 0x20, 0x00, 0x3a, 0x00, 0x20, 0x00, 0x32, 0x00, 0x32, 0x00, 0x2d, 0x00, 0x36, 0x00, 0x2d,
+		0x00, 0x32, 0x00, 0x30, 0x00, 0x32, 0x00, 0x35, 0x00, 0x00, 0x46, 0x6f, 0x6e, 0x74, 0x46, 0x6f, 0x72, 0x67, 0x65, 0x20, 0x32, 0x2e, 0x30, 0x20, 0x3a, 0x20, 0x4c, 0x69, 0x6e, 0x61, 0x45, 0x64, 0x69, 0x74, 0x6f, 0x72, 0x49, 0x63, 0x6f, 0x6e, 0x73, 0x20,
+		0x52, 0x65, 0x67, 0x75, 0x6c, 0x61, 0x72, 0x20, 0x3a, 0x20, 0x32, 0x32, 0x2d, 0x36, 0x2d, 0x32, 0x30, 0x32, 0x35, 0x00, 0x00, 0x4c, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x61, 0x00, 0x45, 0x00, 0x64, 0x00, 0x69, 0x00, 0x74, 0x00, 0x6f, 0x00, 0x72, 0x00, 0x49,
+		0x00, 0x63, 0x00, 0x6f, 0x00, 0x6e, 0x00, 0x73, 0x00, 0x20, 0x00, 0x52, 0x00, 0x65, 0x00, 0x67, 0x00, 0x75, 0x00, 0x6c, 0x00, 0x61, 0x00, 0x72, 0x00, 0x00, 0x4c, 0x69, 0x6e, 0x61, 0x45, 0x64, 0x69, 0x74, 0x6f, 0x72, 0x49, 0x63, 0x6f, 0x6e, 0x73, 0x20,
+		0x52, 0x65, 0x67, 0x75, 0x6c, 0x61, 0x72, 0x00, 0x00, 0x56, 0x00, 0x65, 0x00, 0x72, 0x00, 0x73, 0x00, 0x69, 0x00, 0x6f, 0x00, 0x6e, 0x00, 0x20, 0x00, 0x31, 0x00, 0x2e, 0x00, 0x30, 0x00, 0x00, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x20, 0x31, 0x2e,
+		0x30, 0x00, 0x00, 0x4c, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x61, 0x00, 0x45, 0x00, 0x64, 0x00, 0x69, 0x00, 0x74, 0x00, 0x6f, 0x00, 0x72, 0x00, 0x49, 0x00, 0x63, 0x00, 0x6f, 0x00, 0x6e, 0x00, 0x73, 0x00, 0x2d, 0x00, 0x52, 0x00, 0x65, 0x00, 0x67, 0x00, 0x75,
+		0x00, 0x6c, 0x00, 0x61, 0x00, 0x72, 0x00, 0x00, 0x4c, 0x69, 0x6e, 0x61, 0x45, 0x64, 0x69, 0x74, 0x6f, 0x72, 0x49, 0x63, 0x6f, 0x6e, 0x73, 0x2d, 0x52, 0x65, 0x67, 0x75, 0x6c, 0x61, 0x72, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x01, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x07,
+		0x07, 0x75, 0x6e, 0x69, 0x30, 0x30, 0x30, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xff, 0xff, 0x00, 0x02, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0x00, 0x01, 0x00, 0x07, 0x00, 0x01, 0x00, 0x04,
+		0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0xdf, 0xd6, 0xcb, 0x31, 0x00, 0x00, 0x00, 0x00, 0xe4, 0x51, 0x11, 0xc1, 0x00, 0x00, 0x00, 0x00, 0xe4, 0x7d, 0xe3, 0x66};
+	static constexpr unsigned int __icons_ttf_len = 1968;
 
 	////////////////////////////////////////////////////////////////////////////////
 	// :: COMMON DEFINES
@@ -87,6 +140,7 @@ namespace vekt
 
 	static inline void* mmm(size_t sz)
 	{
+		if (sz < 0) { int a = 5; }
 		V_LOG("Malloced %d", sz);
 		return malloc(sz);
 	}
@@ -224,6 +278,11 @@ namespace vekt
 				_elements[i].~T();
 			}
 
+			for (unsigned int i = _capacity; i < new_capacity; i++)
+			{
+				new (&new_elements[i]) T();
+			}
+
 			if (_elements) { FREE(_elements); }
 
 			_elements = new_elements;
@@ -265,13 +324,6 @@ namespace vekt
 			_count = sz;
 		}
 
-		inline T* data() { return _elements; }
-
-		T&					operator[](unsigned int index) { return _elements[index]; }
-		const T&			operator[](unsigned int index) const { return _elements[index]; }
-		inline bool			empty() const { return _count == 0; }
-		inline unsigned int size() const { return _count; }
-
 		inline iterator find(T& t)
 		{
 			for (unsigned int i = 0; i < _count; i++)
@@ -281,6 +333,13 @@ namespace vekt
 
 			return end();
 		};
+
+		inline T* data() const { return _elements; }
+
+		T&					operator[](unsigned int index) { return _elements[index]; }
+		const T&			operator[](unsigned int index) const { return _elements[index]; }
+		inline bool			empty() const { return _count == 0; }
+		inline unsigned int size() const { return _count; }
 
 		inline iterator		  begin() { return _elements; }
 		inline const_iterator begin() const { return _elements; }
@@ -613,7 +672,7 @@ namespace vekt
 		wf_size_y_relative		 = 1 << 5,
 		wf_size_x_absolute		 = 1 << 6,
 		wf_size_y_absolute		 = 1 << 7,
-		wf_size_x_copy_y		 = 1 << 9,
+		wf_size_x_copy_y		 = 1 << 8,
 		wf_size_y_copy_x		 = 1 << 9,
 		wf_size_x_total_children = 1 << 10,
 		wf_size_x_max_children	 = 1 << 11,
@@ -1059,45 +1118,12 @@ namespace vekt
 	// :: VERTICES
 	////////////////////////////////////////////////////////////////////////////////
 
-	struct vertex_p
-	{
-		vec2 pos;
-	};
-
-	struct vertex_pu
-	{
-		vec2 pos;
-		vec2 uv;
-	};
-
-	struct vertex_pc
-	{
-		vec2 pos;
-		vec4 color;
-	};
-
-	struct vertex_puc
+	struct vertex
 	{
 		vec2 pos;
 		vec2 uv;
 		vec4 color;
 	};
-
-#ifdef VEKT_VERTEX_BASIC_P
-	typedef vertex_p vertex_basic;
-#elifdef VEKT_VERTEX_BASIC_PU
-	typedef vertex_pu vertex_basic;
-#elifdef VEKT_VERTEX_BASIC_PC
-	typedef vertex_pc vertex_basic;
-#else
-	typedef vertex_puc vertex_basic;
-#endif
-
-#ifdef VEKT_VERTEX_TEXT_PU
-	typedef vertex_pu vertex_text;
-#else
-	typedef vertex_puc vertex_text;
-#endif
 
 	typedef unsigned short index;
 
@@ -1105,26 +1131,43 @@ namespace vekt
 	// :: BUILDER
 	////////////////////////////////////////////////////////////////////////////////
 
-	struct basic_draw_buffer
+	struct draw_buffer
 	{
-		pod_vector<vertex_basic> vertices;
-		pod_vector<index>		 indices;
-		unsigned int			 draw_order = 0;
-		void*					 user_data	= nullptr;
-		vec4					 clip		= vec4();
+		void*		 user_data	   = nullptr;
+		font*		 used_font	   = nullptr;
+		vec4		 clip		   = vec4();
+		vertex*		 vertex_start  = nullptr;
+		index*		 index_start   = nullptr;
+		unsigned int draw_order	   = 0;
+		unsigned int vertex_count  = 0;
+		unsigned int index_count   = 0;
+		unsigned int _max_vertices = 0;
+		unsigned int _max_indices  = 0;
+
+		inline void add_vertex(const vertex& vtx)
+		{
+			ASSERT(vertex_count < _max_vertices);
+			vertex_start[vertex_count] = vtx;
+			vertex_count++;
+		}
+
+		inline vertex& add_get_vertex()
+		{
+			ASSERT(vertex_count < _max_vertices);
+			const unsigned int idx = vertex_count;
+			vertex_count++;
+			return vertex_start[idx];
+		}
+
+		inline void add_index(index idx)
+		{
+			ASSERT(index_count < _max_indices);
+			index_start[index_count] = idx;
+			index_count++;
+		}
 	};
 
-	struct text_draw_buffer
-	{
-		pod_vector<vertex_text> vertices;
-		pod_vector<index>		indices;
-		unsigned int			draw_order = 0;
-		void*					user_data  = nullptr;
-		vec4					clip	   = vec4();
-	};
-
-	typedef std::function<void(const basic_draw_buffer& db)> draw_basic_callback;
-	typedef std::function<void(const text_draw_buffer& db)>	 draw_text_callback;
+	typedef std::function<void(const draw_buffer& db)> draw_callback;
 
 	class builder
 	{
@@ -1138,7 +1181,10 @@ namespace vekt
 
 		struct init_config
 		{
-			size_t widget_buffer_sz = 0;
+			size_t widget_buffer_sz = 1024 * 1024;
+			size_t vertex_buffer_sz = 1024 * 1024;
+			size_t index_buffer_sz	= 1024 * 1024;
+			size_t buffer_count		= 10;
 		};
 
 		builder()					  = default;
@@ -1159,23 +1205,21 @@ namespace vekt
 		void			   add_stroke_rect(const gfx_stroke_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed);
 		void			   add_text(const gfx_text& text, const vec2& position, const vec2& size, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed);
 		static vec2		   get_text_size(const gfx_text& text);
-		basic_draw_buffer* get_draw_buffer_basic(unsigned int draw_order, void* user_data);
-		text_draw_buffer*  get_draw_buffer_text(unsigned int draw_order, void* user_data);
+		draw_buffer*	   get_draw_buffer(unsigned int draw_order, void* user_data, font* fnt = nullptr);
 		bool			   push_to_clip_stack(const vec4& rect);
 		bool			   push_to_clip_stack_if_intersects(const vec4& rect);
 		void			   pop_clip_stack();
 		vec4			   calculate_intersection(const vec4& clip0, const vec4& clip1) const;
 
 		// Widgets
-
 		widget* widget_horizontal_divider(float height, const vec4& color = vec4(1, 1, 1, 1));
 		widget* widget_vertical_divider(float width, const vec4& color = vec4(1, 1, 1, 1));
 		widget* widget_button(float height, font* fnt, const VEKT_STRING& text, const vec4& color = vec4(0, 0, 0, 1), const vec4& text_color = vec4(1, 1, 1, 1));
+		widget* widget_checkbox(float height, void* sdf_material, const vec4& color = vec4(0, 0, 0, 1), const vec4& check_color = vec4(1, 1, 1, 1));
 
 		inline vec4 get_current_clip() const { return _clip_stack.empty() ? vec4() : _clip_stack[_clip_stack.size() - 1]; }
 		inline void set_root(widget* root) { _root = root; }
-		inline void set_on_draw_basic(draw_basic_callback cb) { _on_draw_basic = cb; }
-		inline void set_on_draw_text(draw_text_callback cb) { _on_draw_text = cb; }
+		inline void set_on_draw(draw_callback cb) { _on_draw = cb; }
 
 		template <typename... Args>
 		widget* allocate(Args&&... args)
@@ -1199,26 +1243,24 @@ namespace vekt
 		void	generate_sharp_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max);
 		void	generate_offset_rect(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount);
 		void	generate_offset_rounded_rect(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount);
-		void	add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size, bool add_ccw);
-		void	add_filled_rect(basic_draw_buffer* db, unsigned int start, unsigned int size);
-		void	add_filled_rect_central(basic_draw_buffer* db, unsigned int start, unsigned int central_start, unsigned int size);
-		void	add_vertices(basic_draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max);
-		void	add_central_vertex(basic_draw_buffer* db, const vec4& color_start, const vec4& color_end, const vec2& min, const vec2& max);
-		void	add_vertices_aa(basic_draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max);
+		void	add_strip(draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size, bool add_ccw);
+		void	add_filled_rect(draw_buffer* db, unsigned int start, unsigned int size);
+		void	add_filled_rect_central(draw_buffer* db, unsigned int start, unsigned int central_start, unsigned int size);
+		void	add_vertices(draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max);
+		void	add_central_vertex(draw_buffer* db, const vec4& color_start, const vec4& color_end, const vec2& min, const vec2& max);
+		void	add_vertices_aa(draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max);
 		widget* find_widget_at(widget* current_widget, const vec2& mouse);
 		void	pass_hover_state(widget* w, const vec2& mouse);
 
 	private:
-		pool<widget>				  _widget_pool;
-		pod_vector<vec4>			  _clip_stack;
-		pod_vector<input_layer>		  _input_layers;
-		pod_vector<basic_draw_buffer> _basic_draw_buffers;
-		pod_vector<text_draw_buffer>  _text_draw_buffers;
-		widget*						  _root				   = nullptr;
-		draw_basic_callback			  _on_draw_basic	   = nullptr;
-		draw_text_callback			  _on_draw_text		   = nullptr;
-		pod_vector<widget*>			  _press_state_history = {};
-		vec2						  _mouse_position	   = {};
+		pool<widget>			_widget_pool;
+		pod_vector<vec4>		_clip_stack;
+		pod_vector<input_layer> _input_layers;
+		pod_vector<draw_buffer> _draw_buffers;
+		widget*					_root				 = nullptr;
+		draw_callback			_on_draw			 = nullptr;
+		pod_vector<widget*>		_press_state_history = {};
+		vec2					_mouse_position		 = {};
 
 		pod_vector<vec2>	_reuse_outer_path;
 		pod_vector<vec2>	_reuse_inner_path;
@@ -1227,6 +1269,13 @@ namespace vekt
 		pod_vector<vec2>	_reuse_aa_inner_path;
 		pod_vector<widget*> _reuse_fill_x;
 		pod_vector<widget*> _reuse_fill_y;
+
+		vertex*		 _vertex_buffer			  = nullptr;
+		index*		 _index_buffer			  = nullptr;
+		unsigned int _vertex_count_per_buffer = 0;
+		unsigned int _index_count_per_buffer  = 0;
+		unsigned int _buffer_count			  = 0;
+		unsigned int _buffer_counter		  = 0;
 	};
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -1316,31 +1365,20 @@ namespace vekt
 			return fm;
 		}
 
-		font* load_font(const char* file, unsigned int size, bool is_sdf = false, int sdf_padding = 3, int sdf_edge = 128, float sdf_distance = 32.0f);
+		void init();
+		void uninit();
+
+		font* load_font(const char* file, unsigned int size, unsigned int range_start = 0, unsigned int range_end = 128, bool is_sdf = false, int sdf_padding = 3, int sdf_edge = 128, float sdf_distance = 32.0f);
 		void  unload_font(font* fnt);
 
-		inline void init() {};
-		inline void uninit()
-		{
-			for (atlas* atl : _atlases)
-			{
-				if (_atlas_destroyed_cb) _atlas_destroyed_cb(atl);
-				delete atl;
-			}
-
-			for (font* fnt : _fonts)
-				delete fnt;
-
-			_atlases.clear();
-			_fonts.clear();
-		}
-
-		inline void set_atlas_created_callback(atlas_cb cb) { _atlas_created_cb = cb; }
-		inline void set_atlas_updated_callback(atlas_cb cb) { _atlas_updated_cb = cb; }
-		inline void set_atlas_destroyed_callback(atlas_cb cb) { _atlas_destroyed_cb = cb; }
+		inline void	 set_atlas_created_callback(atlas_cb cb) { _atlas_created_cb = cb; }
+		inline void	 set_atlas_updated_callback(atlas_cb cb) { _atlas_updated_cb = cb; }
+		inline void	 set_atlas_destroyed_callback(atlas_cb cb) { _atlas_destroyed_cb = cb; }
+		inline font* get_icons_font() const { return _icons_font; }
 
 	private:
-		void find_atlas(font* fnt);
+		void  find_atlas(font* fnt);
+		font* load_font(const unsigned char* data, unsigned int data_size, unsigned int size, unsigned int range0, unsigned int range1, bool is_sdf, int sdf_padding, int sdf_edge, float sdf_distance);
 
 	private:
 		pod_vector<atlas*> _atlases;
@@ -1348,6 +1386,7 @@ namespace vekt
 		atlas_cb		   _atlas_created_cb   = nullptr;
 		atlas_cb		   _atlas_updated_cb   = nullptr;
 		atlas_cb		   _atlas_destroyed_cb = nullptr;
+		font*			   _icons_font		   = nullptr;
 	};
 
 }
@@ -1639,31 +1678,45 @@ namespace vekt
 
 	void builder::init(const init_config& conf)
 	{
+		ASSERT(conf.vertex_buffer_sz > 0 && conf.index_buffer_sz > 0 && conf.vertex_buffer_sz > 0 && conf.widget_buffer_sz > 0);
+		ASSERT(conf.buffer_count * sizeof(vertex) < conf.vertex_buffer_sz && conf.buffer_count * sizeof(index) < conf.index_buffer_sz);
+
 		const unsigned int widget_count = static_cast<unsigned int>(conf.widget_buffer_sz / sizeof(widget));
 		_widget_pool.init(widget_count);
+
+		const size_t vertex_count = conf.vertex_buffer_sz / sizeof(vertex);
+		const size_t index_count  = conf.index_buffer_sz / sizeof(index);
+		_vertex_count_per_buffer  = static_cast<unsigned int>(vertex_count / conf.buffer_count);
+		_index_count_per_buffer	  = static_cast<unsigned int>(index_count / conf.buffer_count);
+		_buffer_count			  = conf.buffer_count;
+
+		_vertex_buffer = reinterpret_cast<vertex*>(MALLOC(sizeof(vertex) * vertex_count));
+		_index_buffer  = reinterpret_cast<index*>(MALLOC(sizeof(index) * index_count));
+
+		for (size_t i = 0; i < vertex_count; i++)
+			new (&_vertex_buffer[i]) vertex();
+		for (size_t i = 0; i < index_count; i++)
+			new (&_index_buffer[i]) index();
 	}
 
-	void builder::uninit() { _widget_pool.clear(); }
+	void builder::uninit()
+	{
+		_widget_pool.clear();
+
+		if (_vertex_buffer) FREE(_vertex_buffer);
+		if (_index_buffer) FREE(_index_buffer);
+
+		_vertex_buffer = nullptr;
+		_index_buffer  = nullptr;
+	}
 
 	void builder::build(const vec2& screen_size)
 	{
 		ASSERT(_root);
 
-		/* clear draw buffers */
-		for (basic_draw_buffer& db : _basic_draw_buffers)
-		{
-			db.vertices.resize(0);
-			db.indices.resize(0);
-		}
-
-		for (text_draw_buffer& db : _text_draw_buffers)
-		{
-			db.vertices.resize(0);
-			db.indices.resize(0);
-		}
-		_basic_draw_buffers.resize(0, false);
-		_text_draw_buffers.resize(0, false);
+		_draw_buffers.resize(0);
 		_clip_stack.resize(0);
+		_buffer_counter = 0;
 
 		/* size & pos & draw */
 		_reuse_fill_x.resize(0);
@@ -1688,41 +1741,11 @@ namespace vekt
 
 	void builder::flush()
 	{
-		/* flush */
-		std::sort(_basic_draw_buffers.begin(), _basic_draw_buffers.end(), [](const basic_draw_buffer& a, const basic_draw_buffer& b) { return a.draw_order < b.draw_order; });
-		std::sort(_text_draw_buffers.begin(), _text_draw_buffers.end(), [](const text_draw_buffer& a, const text_draw_buffer& b) { return a.draw_order < b.draw_order; });
-		auto basic_it = _basic_draw_buffers.begin();
-		auto text_it  = _text_draw_buffers.begin();
+		if (!_on_draw) return;
+		std::sort(_draw_buffers.begin(), _draw_buffers.end(), [](const draw_buffer& a, const draw_buffer& b) { return a.draw_order < b.draw_order; });
 
-		while (basic_it != _basic_draw_buffers.end() && text_it != _text_draw_buffers.end())
-		{
-			if (basic_it->draw_order <= text_it->draw_order)
-			{
-				if (_on_draw_basic) _on_draw_basic(*basic_it);
-				++basic_it;
-			}
-			else
-			{
-				if (_on_draw_text) _on_draw_text(*text_it);
-				++text_it;
-			}
-		}
-
-		if (_on_draw_basic)
-		{
-			for (; basic_it != _basic_draw_buffers.end(); ++basic_it)
-			{
-				_on_draw_basic(*basic_it);
-			}
-		}
-
-		if (_on_draw_text)
-		{
-			for (; text_it != _text_draw_buffers.end(); ++text_it)
-			{
-				_on_draw_text(*text_it);
-			}
-		}
+		for (draw_buffer& db : _draw_buffers)
+			_on_draw(db);
 	}
 
 	void builder::on_mouse_move(const vec2& mouse)
@@ -1888,10 +1911,10 @@ namespace vekt
 
 	void builder::add_filled_rect(const gfx_filled_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed)
 	{
-		basic_draw_buffer* db = get_draw_buffer_basic(draw_order, user_data);
+		draw_buffer* db = get_draw_buffer(draw_order, user_data);
 
-		const vec4 color_start = use_pressed ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_start);
-		const vec4 color_end   = use_pressed ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_end);
+		const vec4 color_start = (use_pressed && rect.pressed_color.w > 0.001f) ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_start);
+		const vec4 color_end   = (use_pressed && rect.pressed_color.w > 0.001f) ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_end);
 
 		_reuse_outer_path.resize(0);
 		_reuse_outline_path.resize(0);
@@ -1917,12 +1940,12 @@ namespace vekt
 				generate_offset_rect(_reuse_aa_outer_path, _reuse_outer_path, -static_cast<float>(rect.aa_thickness));
 		}
 
-		const unsigned int out_start = db->vertices.size();
+		const unsigned int out_start = db->vertex_count;
 		add_vertices(db, _reuse_outer_path, color_start, color_end, rect.color_direction, min, max);
 
 		if (has_rounding)
 		{
-			const unsigned int central_start = db->vertices.size();
+			const unsigned int central_start = db->vertex_count;
 			add_central_vertex(db, color_start, color_end, min, max);
 			add_filled_rect_central(db, out_start, central_start, _reuse_outer_path.size());
 		}
@@ -1934,17 +1957,17 @@ namespace vekt
 		if (has_outline)
 		{
 			// add original vertices
-			const unsigned int copy_start = db->vertices.size();
+			const unsigned int copy_start = db->vertex_count;
 			add_vertices(db, _reuse_outer_path, rect.outline_color, rect.outline_color, direction::horizontal, min, max);
 
-			outline_start = db->vertices.size();
+			outline_start = db->vertex_count;
 			add_vertices(db, _reuse_outline_path, rect.outline_color, rect.outline_color, vekt::direction::horizontal, min, max);
 			add_strip(db, outline_start, copy_start, _reuse_outline_path.size(), false);
 		}
 
 		if (has_aa)
 		{
-			const unsigned int out_aa_start = db->vertices.size();
+			const unsigned int out_aa_start = db->vertex_count;
 			add_vertices_aa(db, _reuse_aa_outer_path, out_start, 0.0f, min, max);
 
 			if (has_outline)
@@ -1956,9 +1979,9 @@ namespace vekt
 
 	void builder::add_stroke_rect(const gfx_stroke_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed)
 	{
-		basic_draw_buffer* db		   = get_draw_buffer_basic(draw_order, user_data);
-		const vec4		   color_start = use_pressed ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_start);
-		const vec4		   color_end   = use_pressed ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_end);
+		draw_buffer* db			 = get_draw_buffer(draw_order, user_data);
+		const vec4	 color_start = (use_pressed && rect.pressed_color.w > 0.001f) ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_start);
+		const vec4	 color_end	 = (use_pressed && rect.pressed_color.w > 0.001f) ? rect.pressed_color : ((use_hovered && rect.hovered_color.w > 0.001f) ? rect.hovered_color : rect.color_end);
 		_reuse_outer_path.resize(0);
 		_reuse_inner_path.resize(0);
 
@@ -1987,21 +2010,21 @@ namespace vekt
 		}
 
 		// Original stroke
-		const unsigned int out_start = db->vertices.size();
+		const unsigned int out_start = db->vertex_count;
 		add_vertices(db, _reuse_outer_path, color_start, color_end, rect.color_direction, min, max);
-		const unsigned int in_start = db->vertices.size();
+		const unsigned int in_start = db->vertex_count;
 		add_vertices(db, _reuse_inner_path, color_start, color_end, rect.color_direction, min, max);
 		add_strip(db, out_start, in_start, _reuse_outer_path.size(), false);
 
 		if (has_aa)
 		{
 			// outer aa
-			const unsigned int out_aa_start = db->vertices.size();
+			const unsigned int out_aa_start = db->vertex_count;
 			add_vertices_aa(db, _reuse_aa_outer_path, out_start, 0.0f, min, max);
 			add_strip(db, out_aa_start, out_start, _reuse_aa_outer_path.size(), false);
 
 			//// inner aa
-			const unsigned int in_aa_start = db->vertices.size();
+			const unsigned int in_aa_start = db->vertex_count;
 			add_vertices_aa(db, _reuse_aa_inner_path, in_start, 0.0f, min, max);
 			add_strip(db, in_start, in_aa_start, _reuse_aa_inner_path.size(), false);
 		}
@@ -2015,17 +2038,15 @@ namespace vekt
 			return;
 		}
 
-		const vec4 color_start = use_pressed ? text.pressed_color : ((use_hovered && text.hovered_color.w > 0.001f) ? text.hovered_color : text.color_start);
-		const vec4 color_end   = use_pressed ? text.pressed_color : ((use_hovered && text.hovered_color.w > 0.001f) ? text.hovered_color : text.color_end);
+		const vec4 color_start = (use_pressed && text.pressed_color.w > 0.001f) ? text.pressed_color : ((use_hovered && text.hovered_color.w > 0.001f) ? text.hovered_color : text.color_start);
+		const vec4 color_end   = (use_pressed && text.pressed_color.w > 0.001f) ? text.pressed_color : ((use_hovered && text.hovered_color.w > 0.001f) ? text.hovered_color : text.color_end);
 
-		text_draw_buffer* db		  = get_draw_buffer_text(draw_order, user_data);
-		const float		  pixel_scale = text.target_font->_scale;
+		draw_buffer* db			 = get_draw_buffer(draw_order, user_data, text.target_font);
+		const float	 pixel_scale = text.target_font->_scale;
 
-		const unsigned int start_vertices_idx = db->vertices.size();
-		const unsigned int start_indices_idx  = db->indices.size();
+		const unsigned int start_vertices_idx = db->vertex_count;
+		const unsigned int start_indices_idx  = db->index_count;
 		const unsigned int char_count		  = static_cast<unsigned int>(text.text.size());
-		db->vertices.resize(start_vertices_idx + char_count * 4);
-		db->indices.resize(start_indices_idx + char_count * 6);
 
 		unsigned int vtx_counter = 0;
 		unsigned int idx_counter = 0;
@@ -2045,24 +2066,17 @@ namespace vekt
 			const float quad_right	= quad_left + g.width;
 			const float quad_bottom = quad_top + g.height;
 
-			vertex_text v0 = {
-				.pos = {quad_left, quad_top},
-			};
+			vertex& v0 = db->add_get_vertex();
+			vertex& v1 = db->add_get_vertex();
+			vertex& v2 = db->add_get_vertex();
+			vertex& v3 = db->add_get_vertex();
 
-			vertex_text v1 = {
-				.pos = {quad_right, quad_top},
-			};
+			v0.pos = {quad_left, quad_top};
+			v1.pos = {quad_right, quad_top};
+			v2.pos = {quad_right, quad_bottom};
+			v3.pos = {quad_left, quad_bottom};
 
-			vertex_text v2 = {
-				.pos = {quad_right, quad_bottom},
-			};
-
-			vertex_text v3 = {
-				.pos = {quad_left, quad_bottom},
-			};
-
-#if defined VEKT_VERTEX_TEXT_PCU
-			auto set_col = [&](vertex_text& vtx) {
+			auto set_col = [&](vertex& vtx) {
 				const float x0 = math::remap(vtx.pos.x, position.x, end.x, 0.0f, 1.0f);
 				const float y0 = math::remap(vtx.pos.y, position.y, end.y, 0.0f, 1.0f);
 				vtx.color	   = text.color_direction == direction::horizontal ? vec4::lerp(color_start, color_end, x0) : vec4::lerp(color_start, color_end, y0);
@@ -2073,25 +2087,18 @@ namespace vekt
 			set_col(v2);
 			set_col(v3);
 
-#endif
-
 			v0.uv = vec2(g.uv_x, g.uv_y);
 			v1.uv = v0.uv + vec2(g.uv_w, 0.0f);
 			v2.uv = v1.uv + vec2(0.0f, g.uv_h);
 			v3.uv = v0.uv + vec2(0.0f, g.uv_h);
 
-			db->vertices[start_vertices_idx + vtx_counter]	   = v0;
-			db->vertices[start_vertices_idx + vtx_counter + 1] = v1;
-			db->vertices[start_vertices_idx + vtx_counter + 2] = v2;
-			db->vertices[start_vertices_idx + vtx_counter + 3] = v3;
+			db->add_index(start_vertices_idx + vtx_counter);
+			db->add_index(start_vertices_idx + vtx_counter + 1);
+			db->add_index(start_vertices_idx + vtx_counter + 3);
 
-			db->indices[start_indices_idx + idx_counter]	 = start_vertices_idx + vtx_counter;
-			db->indices[start_indices_idx + idx_counter + 1] = start_vertices_idx + vtx_counter + 1;
-			db->indices[start_indices_idx + idx_counter + 2] = start_vertices_idx + vtx_counter + 3;
-
-			db->indices[start_indices_idx + idx_counter + 3] = start_vertices_idx + vtx_counter + 1;
-			db->indices[start_indices_idx + idx_counter + 4] = start_vertices_idx + vtx_counter + 2;
-			db->indices[start_indices_idx + idx_counter + 5] = start_vertices_idx + vtx_counter + 3;
+			db->add_index(start_vertices_idx + vtx_counter + 1);
+			db->add_index(start_vertices_idx + vtx_counter + 2);
+			db->add_index(start_vertices_idx + vtx_counter + 3);
 
 			vtx_counter += 4;
 			idx_counter += 6;
@@ -2140,17 +2147,14 @@ namespace vekt
 			const uint8_t c0 = static_cast<uint8_t>(str[i]);
 			const glyph&  g0 = fnt->glyph_info[c0];
 
-			// Apply horizontal advance (in unscaled font units, so multiply by scale)
 			total_x += g0.advance_x * scale;
 
-			// Apply kerning if next char exists
 			if (str[i + 1])
 			{
 				const uint8_t c1 = static_cast<uint8_t>(str[i + 1]);
 				total_x += g0.kern_advance[c1] * scale;
 			}
 
-			// Optional: Apply custom spacing between glyphs
 			total_x += static_cast<float>(text.spacing);
 			max_y = math::max(max_y, static_cast<float>(g0.height));
 		}
@@ -2158,7 +2162,7 @@ namespace vekt
 		return vec2(total_x - text.spacing, max_y); // remove last spacing
 	}
 
-	void builder::add_strip(basic_draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size, bool add_ccw)
+	void builder::add_strip(draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size, bool add_ccw)
 	{
 		for (unsigned int i = 0; i < size; i++)
 		{
@@ -2166,76 +2170,67 @@ namespace vekt
 			const unsigned int p1_next = outer_start + (i + 1) % size;
 			const unsigned int p2_curr = inner_start + i;
 			const unsigned int p2_next = inner_start + (i + 1) % size;
-			db->indices.push_back(p1_curr);
+			db->add_index(p1_curr);
 
 			if (add_ccw)
 			{
-				db->indices.push_back(p2_curr);
-				db->indices.push_back(p1_next);
+				db->add_index(p2_curr);
+				db->add_index(p1_next);
 			}
 			else
 			{
-				db->indices.push_back(p1_next);
-				db->indices.push_back(p2_curr);
+				db->add_index(p1_next);
+				db->add_index(p2_curr);
 			}
 
-			db->indices.push_back(p1_next);
+			db->add_index(p1_next);
 			if (add_ccw)
 			{
-				db->indices.push_back(p2_curr);
-				db->indices.push_back(p2_next);
+				db->add_index(p2_curr);
+				db->add_index(p2_next);
 			}
 			else
 			{
-				db->indices.push_back(p2_next);
-				db->indices.push_back(p2_curr);
+				db->add_index(p2_next);
+				db->add_index(p2_curr);
 			}
 		}
 	}
 
-	void builder::add_filled_rect(basic_draw_buffer* db, unsigned int start, unsigned int size)
+	void builder::add_filled_rect(draw_buffer* db, unsigned int start, unsigned int size)
 	{
 		if (size != 4) return;
 
-		db->indices.push_back(start);
-		db->indices.push_back(start + 1);
-		db->indices.push_back(start + 3);
-
-		db->indices.push_back(start + 1);
-		db->indices.push_back(start + 2);
-		db->indices.push_back(start + 3);
+		db->add_index(start);
+		db->add_index(start + 1);
+		db->add_index(start + 3);
+		db->add_index(start + 1);
+		db->add_index(start + 2);
+		db->add_index(start + 3);
 	}
 
-	void builder::add_filled_rect_central(basic_draw_buffer* db, unsigned int start, unsigned int central_start, unsigned int size)
+	void builder::add_filled_rect_central(draw_buffer* db, unsigned int start, unsigned int central_start, unsigned int size)
 	{
 		for (unsigned int i = 0; i < size; i++)
 		{
-			db->indices.push_back(central_start);
-			db->indices.push_back(start + i);
-			db->indices.push_back(start + ((i + 1) % (size)));
+			db->add_index(central_start);
+			db->add_index(start + i);
+			db->add_index(start + ((i + 1) % (size)));
 		}
 	}
 
-	void builder::add_vertices_aa(basic_draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max)
+	void builder::add_vertices_aa(draw_buffer* db, const pod_vector<vec2>& path, unsigned int original_vertices_idx, float alpha, const vec2& min, const vec2& max)
 	{
-		const unsigned int start_vtx_idx = db->vertices.size();
-		db->vertices.resize(db->vertices.size() + path.size());
+		const unsigned int start_vtx_idx = db->vertex_count;
 
 		for (unsigned int i = 0; i < path.size(); i++)
 		{
-			vertex_basic& vtx = db->vertices[start_vtx_idx + i];
-			vtx.pos			  = path[i];
-
-#if defined VEKT_VERTEX_BASIC_PC || defined VEKT_VERTEX_BASIC_PCU
-			vtx.color	= db->vertices[original_vertices_idx + i].color;
+			vertex& vtx = db->add_get_vertex();
+			vtx.pos		= path[i];
+			vtx.color	= db->vertex_start[original_vertices_idx + i].color;
 			vtx.color.w = alpha;
-
-#endif
-
-#if defined VEKT_VERTEX_BASIC_PU || defined VEKT_VERTEX_BASIC_PCU
-			vtx.uv.x = math::remap(vtx.pos.x, min.x, max.x, 0.0f, 1.0f);
-			vtx.uv.y = math::remap(vtx.pos.y, min.y, max.y, 0.0f, 1.0f);
-#endif
+			vtx.uv.x	= math::remap(vtx.pos.x, min.x, max.x, 0.0f, 1.0f);
+			vtx.uv.y	= math::remap(vtx.pos.y, min.y, max.y, 0.0f, 1.0f);
 		}
 	}
 
@@ -2282,45 +2277,31 @@ namespace vekt
 
 	void builder::generate_offset_rounded_rect(pod_vector<vec2>& out_path, const pod_vector<vec2>& base_path, float amount) {}
 
-	void builder::add_vertices(basic_draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max)
+	void builder::add_vertices(draw_buffer* db, const pod_vector<vec2>& path, const vec4& color_start, const vec4& color_end, direction direction, const vec2& min, const vec2& max)
 	{
-		const unsigned int start_vtx_idx = db->vertices.size();
-		db->vertices.resize(db->vertices.size() + path.size());
+		const unsigned int start_vtx_idx = db->vertex_count;
 
 		for (unsigned int i = 0; i < path.size(); i++)
 		{
-			vertex_basic& vtx = db->vertices[start_vtx_idx + i];
-			vtx.pos			  = path[i];
+			vertex& vtx = db->add_get_vertex();
+			vtx.pos		= path[i];
 
-#if defined VEKT_VERTEX_BASIC_PC || defined VEKT_VERTEX_BASIC_PCU
 			const float ratio = direction == direction::horizontal ? math::remap(vtx.pos.x, min.x, max.x, 0.0f, 1.0f) : math::remap(vtx.pos.y, min.y, max.y, 0.0f, 1.0f);
 			vtx.color.x		  = math::lerp(color_start.x, color_end.x, ratio);
 			vtx.color.y		  = math::lerp(color_start.y, color_end.y, ratio);
 			vtx.color.z		  = math::lerp(color_start.z, color_end.z, ratio);
 			vtx.color.w		  = math::lerp(color_start.w, color_end.w, ratio);
-#endif
-
-#if defined VEKT_VERTEX_BASIC_PU || defined VEKT_VERTEX_BASIC_PCU
-			vtx.uv.x = math::remap(vtx.pos.x, min.x, max.x, 0.0f, 1.0f);
-			vtx.uv.y = math::remap(vtx.pos.y, min.y, max.y, 0.0f, 1.0f);
-#endif
+			vtx.uv.x		  = math::remap(vtx.pos.x, min.x, max.x, 0.0f, 1.0f);
+			vtx.uv.y		  = math::remap(vtx.pos.y, min.y, max.y, 0.0f, 1.0f);
 		}
 	}
 
-	void builder::add_central_vertex(basic_draw_buffer* db, const vec4& color_start, const vec4& color_end, const vec2& min, const vec2& max)
+	void builder::add_central_vertex(draw_buffer* db, const vec4& color_start, const vec4& color_end, const vec2& min, const vec2& max)
 	{
-		db->vertices.increment_back();
-
-		vertex_basic& vtx = db->vertices.get_back();
-		vtx.pos			  = (min + max) * 0.5f;
-
-#if defined VEKT_VERTEX_BASIC_PC || defined VEKT_VERTEX_BASIC_PCU
-		vtx.color = (color_start + color_end) * 0.5f;
-#endif
-
-#if defined VEKT_VERTEX_BASIC_PU || defined VEKT_VERTEX_BASIC_PCU
-		vtx.uv = vec2(0.5f, 0.5f);
-#endif
+		vertex& vtx = db->add_get_vertex();
+		vtx.pos		= (min + max) * 0.5f;
+		vtx.color	= (color_start + color_end) * 0.5f;
+		vtx.uv		= vec2(0.5f, 0.5f);
 	}
 
 	void builder::generate_rounded_rect(pod_vector<vec2>& out_path, const vec2& min, const vec2& max, float r, int segments)
@@ -2390,39 +2371,30 @@ namespace vekt
 		out_path.push_back({min.x, max.y}); // Bottom-left
 	}
 
-	basic_draw_buffer* builder::get_draw_buffer_basic(unsigned int draw_order, void* user_data)
-	{
-		const vec4& clip = get_current_clip();
-		for (basic_draw_buffer& db : _basic_draw_buffers)
-		{
-			if (db.clip.equals(clip) && db.draw_order == draw_order && db.user_data == user_data) { return &db; }
-		}
-
-		_basic_draw_buffers.increment_back();
-		basic_draw_buffer* db = &_basic_draw_buffers.get_back();
-		db->draw_order		  = draw_order;
-		db->user_data		  = user_data;
-		db->clip			  = clip;
-
-		return db;
-	}
-
-	text_draw_buffer* builder::get_draw_buffer_text(unsigned int draw_order, void* user_data)
+	draw_buffer* builder::get_draw_buffer(unsigned int draw_order, void* user_data, font* fnt)
 	{
 		const vec4& clip = get_current_clip();
 
-		for (text_draw_buffer& db : _text_draw_buffers)
+		for (draw_buffer& db : _draw_buffers)
 		{
-			if (db.clip.equals(clip) && db.draw_order == draw_order && db.user_data == user_data) { return &db; }
+			if (db.clip.equals(clip) && db.draw_order == draw_order && db.user_data == user_data && db.used_font == fnt) { return &db; }
 		}
 
-		_text_draw_buffers.increment_back();
+		ASSERT(_buffer_counter < _buffer_count);
 
-		text_draw_buffer* db = &_text_draw_buffers.get_back();
-		db->draw_order		 = draw_order;
-		db->user_data		 = user_data;
-		db->clip			 = clip;
-		return db;
+		draw_buffer db	 = {};
+		db.clip			 = clip;
+		db.draw_order	 = draw_order;
+		db.user_data	 = user_data;
+		db.vertex_start	 = _vertex_buffer + _buffer_counter * _vertex_count_per_buffer;
+		db.index_start	 = _index_buffer + _buffer_counter * _index_count_per_buffer;
+		db.used_font	 = fnt;
+		db._max_vertices = _vertex_count_per_buffer;
+		db._max_indices	 = _index_count_per_buffer;
+
+		_buffer_counter++;
+		_draw_buffers.push_back(db);
+		return &_draw_buffers.get_back();
 	}
 
 	bool builder::push_to_clip_stack(const vec4& rect)
@@ -2498,6 +2470,7 @@ namespace vekt
 		widget* txt = allocate();
 		txt->set_pos_x(0.5f, helper_pos_type::relative, helper_anchor_type::center);
 		txt->set_pos_y(0.5f, helper_pos_type::relative, helper_anchor_type::center);
+
 		gfx_text& gfx_text	 = txt->get_gfx_text();
 		gfx_text.color_start = gfx_text.color_end = text_color;
 		gfx_text.set_font(fnt);
@@ -2505,6 +2478,31 @@ namespace vekt
 
 		button->add_child(txt);
 		return button;
+	}
+
+	widget* builder::widget_checkbox(float height, void* sdf_material, const vec4& color, const vec4& check_color)
+	{
+		widget* box = allocate();
+		box->set_width(1.0f, helper_size_type::copy_other);
+		box->set_height(height, helper_size_type::absolute);
+		box->set_pos_x(0.0f);
+		box->get_data_widget().debug_name	 = "Checkbox";
+		box->get_data_widget().receive_input = true;
+
+		gfx_filled_rect& rect = box->get_gfx_filled_rect();
+		rect.color_start = rect.color_end = color;
+
+		widget* txt = allocate();
+		txt->set_pos_x(0.5f, helper_pos_type::relative, helper_anchor_type::center);
+		txt->set_pos_y(0.5f, helper_pos_type::relative, helper_anchor_type::center);
+		gfx_text& gfx_text	 = txt->get_gfx_text();
+		gfx_text.color_start = gfx_text.color_end = check_color;
+		gfx_text.set_font(font_manager::get().get_icons_font());
+		gfx_text.text				  = "\u0024";
+		txt->get_gfx_data().user_data = sdf_material;
+		box->add_child(txt);
+
+		return box;
 	}
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -2583,33 +2581,17 @@ namespace vekt
 		}
 
 		atlas* atl = new atlas(config.atlas_width, config.atlas_height);
+		_atlases.push_back(atl);
 		if (_atlas_created_cb) _atlas_created_cb(atl);
 		const bool ok = atl->add_font(fnt);
 		ASSERT(ok);
 	}
 
-	font* font_manager::load_font(const char* filename, unsigned int size, bool is_sdf, int sdf_padding, int sdf_edge, float sdf_distance)
+	font* font_manager::load_font(const unsigned char* data, unsigned int data_size, unsigned int size, unsigned int range0, unsigned int range1, bool is_sdf, int sdf_padding, int sdf_edge, float sdf_distance)
 	{
-		std::ifstream file(filename, std::ios::binary | std::ios::ate);
-		if (!file.is_open())
-		{
-			V_ERR("vekt::font_manager::load_font -> Failed opening font file! %s", filename);
-			return nullptr;
-		}
-
-		std::streamsize file_size = file.tellg();
-		file.seekg(0, std::ios::beg);
-
-		pod_vector<unsigned char> ttf_buffer;
-		ttf_buffer.resize(static_cast<unsigned int>(file_size));
-		if (!file.read(reinterpret_cast<char*>(ttf_buffer.data()), file_size))
-		{
-			V_ERR("vekt::font_manager::load_font -> Failed reading font buffer! %s", filename);
-			return nullptr;
-		}
 
 		stbtt_fontinfo stb_font;
-		stbtt_InitFont(&stb_font, ttf_buffer.data(), stbtt_GetFontOffsetForIndex(ttf_buffer.data(), 0));
+		stbtt_InitFont(&stb_font, data, stbtt_GetFontOffsetForIndex(data, 0));
 
 		font* fnt	= new font();
 		fnt->_scale = stbtt_ScaleForPixelHeight(&stb_font, static_cast<float>(size));
@@ -2621,7 +2603,7 @@ namespace vekt
 		int		  max_height  = 0;
 		const int x_padding	  = 2;
 
-		for (int i = 0; i < 128; i++)
+		for (int i = range0; i < range1; i++)
 		{
 			glyph& glyph_info = fnt->glyph_info[i];
 
@@ -2658,7 +2640,7 @@ namespace vekt
 		if (fnt->_atlas == nullptr)
 		{
 			delete fnt;
-			V_ERR("vekt::font_manager::load_font -> Failed finding an atlas for the font! %s", filename);
+			V_ERR("vekt::font_manager::load_font -> Failed finding an atlas for the font!");
 			return nullptr;
 		}
 
@@ -2667,7 +2649,7 @@ namespace vekt
 		int current_atlas_pen_x = 0;
 		int current_atlas_pen_y = 0;
 
-		for (int i = 0; i < 128; i++)
+		for (int i = range0; i < range1; i++)
 		{
 			glyph& glyph_info = fnt->glyph_info[i];
 
@@ -2724,6 +2706,35 @@ namespace vekt
 		return fnt;
 	}
 
+	font* font_manager::load_font(const char* filename, unsigned int size, unsigned int range_start, unsigned int range_end, bool is_sdf, int sdf_padding, int sdf_edge, float sdf_distance)
+	{
+		if (range_start >= range_end)
+		{
+			V_ERR("vekt::font_manager::load_font -> range_start needs to be smaller than range_end! %s", filename);
+			return nullptr;
+		}
+
+		std::ifstream file(filename, std::ios::binary | std::ios::ate);
+		if (!file.is_open())
+		{
+			V_ERR("vekt::font_manager::load_font -> Failed opening font file! %s", filename);
+			return nullptr;
+		}
+
+		std::streamsize file_size = file.tellg();
+		file.seekg(0, std::ios::beg);
+
+		pod_vector<unsigned char> ttf_buffer;
+		ttf_buffer.resize(static_cast<unsigned int>(file_size));
+		if (!file.read(reinterpret_cast<char*>(ttf_buffer.data()), file_size))
+		{
+			V_ERR("vekt::font_manager::load_font -> Failed reading font buffer! %s", filename);
+			return nullptr;
+		}
+
+		return load_font(ttf_buffer.data(), ttf_buffer.size(), size, range_start, range_end, is_sdf, sdf_padding, sdf_edge, sdf_distance);
+	}
+
 	void font_manager::unload_font(font* fnt)
 	{
 		fnt->_atlas->remove_font(fnt);
@@ -2739,6 +2750,26 @@ namespace vekt
 
 		_fonts.remove(fnt);
 		delete fnt;
+	}
+
+	void font_manager::init() { _icons_font = load_font(__icons_ttf, __icons_ttf_len, 32, 32, 37, true, 3, 128, 32); }
+
+	void font_manager::uninit()
+	{
+		if (_icons_font) unload_font(_icons_font);
+		_icons_font = nullptr;
+
+		for (atlas* atl : _atlases)
+		{
+			if (_atlas_destroyed_cb) _atlas_destroyed_cb(atl);
+			delete atl;
+		}
+
+		for (font* fnt : _fonts)
+			delete fnt;
+
+		_atlases.clear();
+		_fonts.clear();
 	}
 
 	font::~font()
