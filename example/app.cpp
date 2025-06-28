@@ -191,7 +191,7 @@ void app::create_top_pane()
 		_vekt_root->add_child(top_pane);
 	}
 
-	vekt::widget* divider = _vekt_builder->widget_horizontal_divider(theme::border_size, theme::color_dark0);
+	vekt::widget* divider = _vekt_builder->widget_horizontal_divider();
 	_vekt_root->add_child(divider);
 }
 
@@ -227,7 +227,7 @@ void app::create_bottom_pane()
 
 			if (create_div)
 			{
-				vekt::widget* divider = _vekt_builder->widget_vertical_divider(theme::border_size, theme::color_dark0);
+				vekt::widget* divider = _vekt_builder->widget_vertical_divider();
 				bottom->add_child(divider);
 			}
 
@@ -237,16 +237,10 @@ void app::create_bottom_pane()
 
 	vekt::widget* bottom_left = create_pane(true, "BottomLeft");
 	{
-		vekt::widget* button0							 = _vekt_builder->widget_button(theme::item_height, _vekt_font, "Button", theme::color_dark2, theme::color_light0);
-		button0->get_gfx_filled_rect().outline_thickness = theme::outline_thickness;
-		button0->get_gfx_filled_rect().outline_color	 = theme::color_dark3;
-		button0->get_gfx_filled_rect().hovered_color	 = theme::color_dark3;
-		button0->get_gfx_filled_rect().pressed_color	 = theme::color_dark1;
+		vekt::widget* button0 = _vekt_builder->widget_button(_vekt_font, "Button");
 		bottom_left->add_child(button0);
 
-		vekt::widget* check							   = _vekt_builder->widget_checkbox(theme::item_height, &_backend.get_sdf_material(), theme::color_dark2, theme::color_light0);
-		check->get_gfx_filled_rect().outline_thickness = theme::outline_thickness;
-		check->get_gfx_filled_rect().outline_color	   = theme::color_dark3;
+		vekt::widget* check											  = _vekt_builder->widget_checkbox(true, &_backend.get_sdf_material());
 		bottom_left->add_child(check);
 	}
 

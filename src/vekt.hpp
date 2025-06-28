@@ -635,8 +635,9 @@ namespace vekt
 
 	struct mouse_event
 	{
-		input_event_type type	= input_event_type::pressed;
-		int				 button = 0;
+		input_event_type type	  = input_event_type::pressed;
+		int				 button	  = 0;
+		vec2			 position = vec2();
 	};
 
 	struct mouse_wheel_event
@@ -740,7 +741,7 @@ namespace vekt
 		none,
 		filled_rect,
 		stroke_rect,
-		text,
+		_text,
 	};
 
 	struct gfx_filled_rect
@@ -775,26 +776,40 @@ namespace vekt
 	struct font;
 	struct gfx_text
 	{
-		VEKT_STRING	 text			 = "";
-		font*		 target_font	 = nullptr;
-		unsigned int spacing		 = 0;
-		vec4		 color_start	 = vec4(1, 1, 1, 1);
-		vec4		 color_end		 = vec4(1, 1, 1, 1);
-		vec4		 hovered_color	 = vec4(1, 1, 1, 0);
-		vec4		 pressed_color	 = vec4(1, 1, 1, 0);
-		direction	 color_direction = direction::horizontal;
-		bool		 _dirty			 = true;
+		VEKT_STRING	 _text					= "";
+		font*		 _font					= nullptr;
+		unsigned int spacing				= 0;
+		vec4		 color_start			= vec4(1, 1, 1, 1);
+		vec4		 color_end				= vec4(1, 1, 1, 1);
+		vec4		 hovered_color			= vec4(1, 1, 1, 0);
+		vec4		 pressed_color			= vec4(1, 1, 1, 0);
+		direction	 color_direction		= direction::horizontal;
+		float		 _scale					= 1.0f;
+		float		 _parent_relative_scale = 0.0f;
+		bool		 _dirty					= true;
 
 		inline void set_text(const VEKT_STRING& txt)
 		{
-			text   = txt;
+			_text  = txt;
 			_dirty = true;
 		}
 
 		inline void set_font(font* fnt)
 		{
-			target_font = fnt;
-			_dirty		= true;
+			_font  = fnt;
+			_dirty = true;
+		}
+
+		inline void set_scale(float s)
+		{
+			_scale = s;
+			_dirty = true;
+		}
+
+		inline void set_parent_relative_scale(float f)
+		{
+			_parent_relative_scale = f;
+			_dirty				   = true;
 		}
 	};
 
@@ -990,9 +1005,9 @@ namespace vekt
 
 		inline gfx_text& set_gfx_type_text()
 		{
-			if (_widget_gfx.type == gfx_type::text) return std::get<gfx_text>(_widget_gfx.gfx);
+			if (_widget_gfx.type == gfx_type::_text) return std::get<gfx_text>(_widget_gfx.gfx);
 			_widget_gfx.gfx	 = gfx_text();
-			_widget_gfx.type = gfx_type::text;
+			_widget_gfx.type = gfx_type::_text;
 			return std::get<gfx_text>(_widget_gfx.gfx);
 		}
 
@@ -1018,10 +1033,10 @@ namespace vekt
 		}
 
 		template <typename T>
-		inline T* get_data_user() const
+		inline T* get_data_user()
 		{
 			static_assert(sizeof(T) < VEKT_USER_DATA_SIZE);
-			return static_cast<T*>(&_user_data);
+			return reinterpret_cast<T*>(_user_data);
 		}
 
 		inline vec4 get_clip_rect() const { return {_widget_data.final_pos.x, _widget_data.final_pos.y, _widget_data.final_size.x, _widget_data.final_size.y}; }
@@ -1114,6 +1129,22 @@ namespace vekt
 		bool		  _press_states[3] = {false};
 	};
 
+	typedef std::function<void(widget*, bool)> on_bool_changed;
+
+	struct checkbox_data
+	{
+		on_bool_changed on_value_changed = nullptr;
+		widget*			_widget			 = nullptr;
+		bool			_value			 = false;
+
+		inline void set_value(bool b)
+		{
+			_value = b;
+			if (on_value_changed) on_value_changed(_widget, _value);
+			if (_widget) _widget->get_data_widget().children[0]->set_visible(_value, false);
+		}
+	};
+
 	////////////////////////////////////////////////////////////////////////////////
 	// :: VERTICES
 	////////////////////////////////////////////////////////////////////////////////
@@ -1169,6 +1200,25 @@ namespace vekt
 
 	typedef std::function<void(const draw_buffer& db)> draw_callback;
 
+	class theme
+	{
+	public:
+		static vec4	 color_item_bg;
+		static vec4	 color_item_hover;
+		static vec4	 color_item_press;
+		static vec4	 color_panel_bg;
+		static vec4	 color_divider;
+		static vec4	 color_item_outline;
+		static vec4	 color_item_fg;
+		static float item_height;
+		static float item_spacing;
+		static float indent_horizontal;
+		static float margin_horizontal;
+		static float margin_vertical;
+		static float border_thickness;
+		static float outline_thickness;
+	};
+
 	class builder
 	{
 	public:
@@ -1203,8 +1253,8 @@ namespace vekt
 		void			   remove_input_layer(unsigned int priority);
 		void			   add_filled_rect(const gfx_filled_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed);
 		void			   add_stroke_rect(const gfx_stroke_rect& rect, const vec2& min, const vec2& max, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed);
-		void			   add_text(const gfx_text& text, const vec2& position, const vec2& size, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed);
-		static vec2		   get_text_size(const gfx_text& text);
+		void			   add_text(const gfx_text& _text, const vec2& position, const vec2& size, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed);
+		static vec2		   get_text_size(gfx_text& _text, const vec2& parent_size = vec2());
 		draw_buffer*	   get_draw_buffer(unsigned int draw_order, void* user_data, font* fnt = nullptr);
 		bool			   push_to_clip_stack(const vec4& rect);
 		bool			   push_to_clip_stack_if_intersects(const vec4& rect);
@@ -1212,10 +1262,11 @@ namespace vekt
 		vec4			   calculate_intersection(const vec4& clip0, const vec4& clip1) const;
 
 		// Widgets
-		widget* widget_horizontal_divider(float height, const vec4& color = vec4(1, 1, 1, 1));
-		widget* widget_vertical_divider(float width, const vec4& color = vec4(1, 1, 1, 1));
-		widget* widget_button(float height, font* fnt, const VEKT_STRING& text, const vec4& color = vec4(0, 0, 0, 1), const vec4& text_color = vec4(1, 1, 1, 1));
-		widget* widget_checkbox(float height, void* sdf_material, const vec4& color = vec4(0, 0, 0, 1), const vec4& check_color = vec4(1, 1, 1, 1));
+		void	widget_add_debug_wrap(widget* w);
+		widget* widget_horizontal_divider();
+		widget* widget_vertical_divider();
+		widget* widget_button(font* fnt, const VEKT_STRING& _text);
+		widget* widget_checkbox(bool initial_value, void* sdf_material);
 
 		inline vec4 get_current_clip() const { return _clip_stack.empty() ? vec4() : _clip_stack[_clip_stack.size() - 1]; }
 		inline void set_root(widget* root) { _root = root; }
@@ -1404,6 +1455,25 @@ namespace vekt
 	config_data config = {};
 
 	////////////////////////////////////////////////////////////////////////////////
+	// :: THEME IMPL
+	////////////////////////////////////////////////////////////////////////////////
+
+	vec4  theme::color_item_bg		= {12.0f / 255.0f, 12.0f / 255.0f, 12.0f / 255.0f, 1.0f};
+	vec4  theme::color_item_hover	= {32.0f / 255.0f, 32.0f / 255.0f, 32.0f / 255.0f, 1.0f};
+	vec4  theme::color_item_press	= {24.0f / 255.0f, 24.0f / 255.0f, 24.0f / 255.0f, 1.0f};
+	vec4  theme::color_panel_bg		= {24.0f / 255.0f, 24.0f / 255.0f, 24.0f / 255.0f, 1.0f};
+	vec4  theme::color_divider		= {12.0f / 255.0f, 12.0f / 255.0f, 12.0f / 255.0f, 1.0f};
+	vec4  theme::color_item_outline = {42.0f / 255.0f, 42.0f / 255.0f, 42.0f / 255.0f, 1.0f};
+	vec4  theme::color_item_fg		= {200.0f / 255.0f, 200.0f / 255.0f, 200.0f / 255.0f, 1.0f};
+	float theme::item_height		= 24.0f;
+	float theme::item_spacing		= 8.0f;
+	float theme::indent_horizontal	= 8.0f;
+	float theme::margin_horizontal	= 4.0f;
+	float theme::margin_vertical	= 2.0f;
+	float theme::border_thickness		= 6.0f;
+	float theme::outline_thickness	= 2.0f;
+
+	////////////////////////////////////////////////////////////////////////////////
 	// :: WIDGET IMPL
 	////////////////////////////////////////////////////////////////////////////////
 
@@ -1505,15 +1575,14 @@ namespace vekt
 	void widget::size_pass()
 	{
 
-		if (_widget_gfx.type == gfx_type::text)
+		if (_widget_gfx.type == gfx_type::_text)
 		{
 			gfx_text& txt = get_gfx_text();
 			if (txt._dirty)
 			{
 				txt._dirty				= false;
-				_widget_data.final_size = builder::get_text_size(get_gfx_text());
+				_widget_data.final_size = builder::get_text_size(txt, _widget_data.parent ? _widget_data.parent->_widget_data.final_size : vec2{});
 			}
-
 			return;
 		}
 
@@ -1646,7 +1715,7 @@ namespace vekt
 		{
 			builder.add_stroke_rect(_widget_gfx.get_data<gfx_stroke_rect>(), _widget_data.final_pos, _widget_data.final_pos + _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data, _is_hovered, _press_states[0]);
 		}
-		else if (_widget_gfx.type == gfx_type::text) { builder.add_text(_widget_gfx.get_data<gfx_text>(), _widget_data.final_pos, _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data, _is_hovered, _press_states[0]); }
+		else if (_widget_gfx.type == gfx_type::_text) { builder.add_text(_widget_gfx.get_data<gfx_text>(), _widget_data.final_pos, _widget_data.final_size, _widget_gfx.draw_order, _widget_gfx.user_data, _is_hovered, _press_states[0]); }
 	}
 
 	void widget::draw_pass_children(builder& builder)
@@ -1656,6 +1725,8 @@ namespace vekt
 
 		for (widget* w : _widget_data.children)
 		{
+			if (!w->get_is_visible()) continue;
+
 			// For this child, whether it clips its own children or not, we check if it intersects into currect clip rect and draw only if so.
 			const vec4 intersection = builder.calculate_intersection(builder.get_current_clip(), w->get_clip_rect());
 			if (intersection.z <= 0 || intersection.w <= 0) continue;
@@ -2032,7 +2103,7 @@ namespace vekt
 
 	void builder::add_text(const gfx_text& text, const vec2& position, const vec2& size, unsigned int draw_order, void* user_data, bool use_hovered, bool use_pressed)
 	{
-		if (text.target_font == nullptr)
+		if (text._font == nullptr)
 		{
 			V_ERR("vekt::builder::add_text() -> No font is set!");
 			return;
@@ -2041,12 +2112,12 @@ namespace vekt
 		const vec4 color_start = (use_pressed && text.pressed_color.w > 0.001f) ? text.pressed_color : ((use_hovered && text.hovered_color.w > 0.001f) ? text.hovered_color : text.color_start);
 		const vec4 color_end   = (use_pressed && text.pressed_color.w > 0.001f) ? text.pressed_color : ((use_hovered && text.hovered_color.w > 0.001f) ? text.hovered_color : text.color_end);
 
-		draw_buffer* db			 = get_draw_buffer(draw_order, user_data, text.target_font);
-		const float	 pixel_scale = text.target_font->_scale;
+		draw_buffer* db			 = get_draw_buffer(draw_order, user_data, text._font);
+		const float	 pixel_scale = text._font->_scale;
 
 		const unsigned int start_vertices_idx = db->vertex_count;
 		const unsigned int start_indices_idx  = db->index_count;
-		const unsigned int char_count		  = static_cast<unsigned int>(text.text.size());
+		const unsigned int char_count		  = static_cast<unsigned int>(text._text.size());
 
 		unsigned int vtx_counter = 0;
 		unsigned int idx_counter = 0;
@@ -2057,14 +2128,14 @@ namespace vekt
 		auto draw_char = [&](const glyph& g, unsigned long c, unsigned long previous_char) {
 			if (previous_char != 0)
 			{
-				const float kern_amt = static_cast<float>(text.target_font->glyph_info[previous_char].kern_advance[c]) * pixel_scale;
-				pen.x += kern_amt;
+				const float kern_amt = static_cast<float>(text._font->glyph_info[previous_char].kern_advance[c]) * pixel_scale;
+				pen.x += kern_amt * text._scale;
 			}
 
-			const float quad_left	= pen.x + g.x_offset;
-			const float quad_top	= pen.y + g.y_offset;
-			const float quad_right	= quad_left + g.width;
-			const float quad_bottom = quad_top + g.height;
+			const float quad_left	= pen.x + g.x_offset * text._scale;
+			const float quad_top	= pen.y + g.y_offset * text._scale;
+			const float quad_right	= quad_left + g.width * text._scale;
+			const float quad_bottom = quad_top + g.height * text._scale;
 
 			vertex& v0 = db->add_get_vertex();
 			vertex& v1 = db->add_get_vertex();
@@ -2103,63 +2174,72 @@ namespace vekt
 			vtx_counter += 4;
 			idx_counter += 6;
 
-			pen.x += g.advance_x * pixel_scale + static_cast<float>(text.spacing);
+			pen.x += g.advance_x * pixel_scale * text._scale + static_cast<float>(text.spacing) * text._scale;
 		};
 
 		const uint8_t* c;
 		float		   max_y_offset = 0;
-		for (c = (uint8_t*)text.text.c_str(); *c; c++)
+		for (c = (uint8_t*)text._text.c_str(); *c; c++)
 		{
 			auto		 character = *c;
-			const glyph& ch		   = text.target_font->glyph_info[character];
+			const glyph& ch		   = text._font->glyph_info[character];
 			max_y_offset		   = math::max(max_y_offset, -ch.y_offset);
 		}
 
-		pen.y += max_y_offset;
+		pen.y += max_y_offset * text._scale;
 
 		unsigned long previous_char = 0;
-		for (c = (uint8_t*)text.text.c_str(); *c; c++)
+		for (c = (uint8_t*)text._text.c_str(); *c; c++)
 		{
 			auto		 character = *c;
-			const glyph& ch		   = text.target_font->glyph_info[character];
+			const glyph& ch		   = text._font->glyph_info[character];
 			draw_char(ch, character, previous_char);
 			previous_char = character;
 		}
 	}
 
-	vec2 builder::get_text_size(const gfx_text& text)
+	vec2 builder::get_text_size(gfx_text& text, const vec2& parent_size)
 	{
-		if (text.target_font == nullptr)
+		if (text._font == nullptr)
 		{
 			V_ERR("vekt::builder::get_text_size() -> No font is set!");
 			return vec2();
 		}
 
-		const font* fnt	  = text.target_font;
+		const font* fnt	  = text._font;
 		const float scale = fnt->_scale;
 
 		float total_x = 0.0f;
 		float max_y	  = 0.0f;
 
-		const char* str = text.text.c_str();
+		if (!math::equals(text._parent_relative_scale, 0.0f, 0.001f) && (!math::equals(parent_size.x, 0.0f, 0.001f) || !math::equals(parent_size.y, 0.0f, 0.001f)))
+		{
+			const float min	  = math::min(parent_size.x, parent_size.y) * text._parent_relative_scale;
+			const float ratio = min / static_cast<float>(fnt->size);
+			text._scale		  = ratio;
+		}
+
+		const float used_scale = text._scale;
+
+		const char* str = text._text.c_str();
 		for (size_t i = 0; str[i]; ++i)
 		{
 			const uint8_t c0 = static_cast<uint8_t>(str[i]);
 			const glyph&  g0 = fnt->glyph_info[c0];
 
-			total_x += g0.advance_x * scale;
+			total_x += g0.advance_x * scale * used_scale;
 
 			if (str[i + 1])
 			{
 				const uint8_t c1 = static_cast<uint8_t>(str[i + 1]);
-				total_x += g0.kern_advance[c1] * scale;
+				total_x += g0.kern_advance[c1] * scale * used_scale;
 			}
 
-			total_x += static_cast<float>(text.spacing);
-			max_y = math::max(max_y, static_cast<float>(g0.height));
+			total_x += static_cast<float>(text.spacing) * used_scale;
+			max_y = math::max(max_y, static_cast<float>(g0.height) * used_scale);
 		}
 
-		return vec2(total_x - text.spacing, max_y); // remove last spacing
+		return vec2(total_x - text.spacing * used_scale, max_y);
 	}
 
 	void builder::add_strip(draw_buffer* db, unsigned int outer_start, unsigned int inner_start, unsigned int size, bool add_ccw)
@@ -2430,75 +2510,104 @@ namespace vekt
 		return {x, y, right - x, bottom - y};
 	}
 
-	widget* builder::widget_horizontal_divider(float height, const vec4& color)
+	void builder::widget_add_debug_wrap(widget* w)
+	{
+		widget* wrapper = allocate();
+		wrapper->set_pos_x(0.0f);
+		wrapper->set_pos_y(0.0f);
+		wrapper->set_width(1.0f);
+		wrapper->set_height(1.0f);
+		gfx_stroke_rect& r = wrapper->get_gfx_stroke_rect();
+		r.thickness		   = 1;
+		r.color_start = r.color_end = vec4(1, 0, 0, 1);
+		w->add_child(wrapper);
+	}
+
+	widget* builder::widget_horizontal_divider()
 	{
 		widget* w = allocate();
 		w->set_pos_x(0.0f, helper_pos_type::relative);
 		w->set_width(1.0f, helper_size_type::relative);
-		w->set_height(height, helper_size_type::absolute);
+		w->set_height(theme::border_thickness, helper_size_type::absolute);
 		w->get_data_widget().debug_name = "Horizontal Divider";
 		gfx_filled_rect& rect			= w->get_gfx_filled_rect();
-		rect.color_start = rect.color_end = color;
+		rect.color_start = rect.color_end = theme::color_divider;
 		return w;
 	}
 
-	widget* builder::widget_vertical_divider(float width, const vec4& color)
+	widget* builder::widget_vertical_divider()
 	{
 		widget* w = allocate();
 		w->set_pos_y(0.0f, helper_pos_type::relative);
 		w->set_height(1.0f, helper_size_type::relative);
-		w->set_width(width, helper_size_type::absolute);
+		w->set_width(theme::border_thickness, helper_size_type::absolute);
 		w->get_data_widget().debug_name = "Vertical Divider";
 
 		gfx_filled_rect& rect = w->get_gfx_filled_rect();
-		rect.color_start = rect.color_end = color;
+		rect.color_start = rect.color_end = theme::color_divider;
 		return w;
 	}
 
-	widget* builder::widget_button(float height, font* fnt, const VEKT_STRING& text, const vec4& color, const vec4& text_color)
+	widget* builder::widget_button(font* fnt, const VEKT_STRING& _text)
 	{
 		widget* button = allocate();
-		button->set_height(height, helper_size_type::absolute);
+		button->set_height(theme::item_height, helper_size_type::absolute);
 		button->set_width(1.0f, helper_size_type::relative);
 		button->set_pos_x(0.0f, helper_pos_type::relative);
 		button->get_data_widget().debug_name	= "Button";
 		button->get_data_widget().receive_input = true;
 
 		gfx_filled_rect& rect = button->get_gfx_filled_rect();
-		rect.color_start = rect.color_end = color;
+		rect.color_start = rect.color_end = theme::color_item_bg;
+		rect.outline_color				  = theme::color_item_outline;
+		rect.outline_thickness			  = theme::outline_thickness;
+		rect.hovered_color				  = theme::color_item_hover;
+		rect.pressed_color				  = theme::color_item_press;
 
-		widget* txt = allocate();
+		widget* txt						  = allocate();
+		txt->get_data_widget().debug_name = "Text";
 		txt->set_pos_x(0.5f, helper_pos_type::relative, helper_anchor_type::center);
 		txt->set_pos_y(0.5f, helper_pos_type::relative, helper_anchor_type::center);
 
 		gfx_text& gfx_text	 = txt->get_gfx_text();
-		gfx_text.color_start = gfx_text.color_end = text_color;
+		gfx_text.color_start = gfx_text.color_end = theme::color_item_fg;
 		gfx_text.set_font(fnt);
-		gfx_text.text = text;
+		gfx_text._text = _text;
 
 		button->add_child(txt);
 		return button;
 	}
 
-	widget* builder::widget_checkbox(float height, void* sdf_material, const vec4& color, const vec4& check_color)
+	widget* builder::widget_checkbox(bool initial_value, void* sdf_material)
 	{
 		widget* box = allocate();
 		box->set_width(1.0f, helper_size_type::copy_other);
-		box->set_height(height, helper_size_type::absolute);
+		box->set_height(theme::item_height, helper_size_type::absolute);
 		box->set_pos_x(0.0f);
 		box->get_data_widget().debug_name	 = "Checkbox";
 		box->get_data_widget().receive_input = true;
 
+		checkbox_data* cb_data = box->get_data_user<checkbox_data>();
+		cb_data->_widget	   = box;
+		cb_data->_value		   = initial_value;
+
+		box->get_data_widget().on_mouse_clicked = [cb_data](widget* w, const mouse_event& ev) { cb_data->set_value(!cb_data->_value); };
+
 		gfx_filled_rect& rect = box->get_gfx_filled_rect();
-		rect.color_start = rect.color_end = color;
+		rect.color_start = rect.color_end = theme::color_item_bg;
+		rect.outline_color				  = theme::color_item_outline;
+		rect.outline_thickness			  = theme::outline_thickness;
 
 		widget* txt = allocate();
 		txt->set_pos_x(0.5f, helper_pos_type::relative, helper_anchor_type::center);
 		txt->set_pos_y(0.5f, helper_pos_type::relative, helper_anchor_type::center);
-		gfx_text& gfx_text	 = txt->get_gfx_text();
-		gfx_text.color_start = gfx_text.color_end = check_color;
-		gfx_text.set_font(font_manager::get().get_icons_font());
-		gfx_text.text				  = "\u0024";
+
+		gfx_text& text	 = txt->get_gfx_text();
+		text.color_start = text.color_end = theme::color_item_fg;
+		text.set_font(font_manager::get().get_icons_font());
+		text._text					= "\u0024";
+		text._parent_relative_scale = 0.8f;
+
 		txt->get_gfx_data().user_data = sdf_material;
 		box->add_child(txt);
 
